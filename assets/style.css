@@ -89,6 +89,10 @@ body {
     box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.18);
 }
 
+.button {
+    background-color: #222222;
+}
+
 .Select-control {
     width: 256px;
     height: 48px;

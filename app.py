@@ -16,7 +16,7 @@ Author: Joseph Walker j.j.walker@durham.ac.uk
 #Initalization
 import dash 
 #Interactive components
-from dash import dcc
+from dash import dcc, ctx, MATCH, ALL
 #HTML tags
 from dash import html
 #Bootstrap components cols and rows
@@ -202,11 +202,18 @@ def PathSelect():
 	)
 	
 @app.callback(
-	[Output('var_path', 'children')],
-	[Input("PathButton", "n_clicks")],
-	[State("var_path", "children")],
+	[
+		Output('var_path', 'children')
+	],
+	[
+		Input("PathButton", "n_clicks")
+	],
+	[
+		State("var_path", "children")
+	],
+	prevent_initial_call = True
 	)
-def update_path(n_clicks, FolderDir):
+def update_photoPath(n_clicks, FolderDir):
 	if n_clicks == 0:
 		return [FolderDir]
 	path = easygui.diropenbox(default=FolderDir)
@@ -216,10 +223,19 @@ def update_path(n_clicks, FolderDir):
 		return [path+os.sep]
 
 @app.callback(
-	[Output('PhotoSelectDropdown','options'),Output('PhotoSelectDropdown','value')],
-	[Input('var_path', "children")],
+	[
+		Output('PhotoSelectDropdown','options'),
+		Output('PhotoSelectDropdown','value')
+	],
+	[
+		Input('var_path', "children")
+	],
+	[
+	
+	],
+	prevent_initial_call = False
 	)
-def update_dropdowns(Dir):
+def update_photoDropdowns(Dir):
 	globed = glob.glob(Dir+"*")
 	options = []
 	for f in globed:
@@ -236,10 +252,14 @@ def update_dropdowns(Dir):
 def CreatePictureFig(Path):
 	if Path is None:
 		img = data.chelsea()
+		xshape = img.shape[1]
+		yshape = img.shape[0]
 	else:
 		img = Image.open(Path) 
-	xshape = img.shape[1]
-	yshape = img.shape[0]
+		xshape = img.size[0]
+		yshape = img.size[1]
+		
+	
 	Fig = go.Figure(
 	layout = {
 		"autosize":True,
@@ -262,17 +282,15 @@ def CreatePictureFig(Path):
 		x=[0], y=[0],
 		mode="markers",
         marker=dict(size=0, color="LightSeaGreen"),
-        name="person", 
+        name="", 
+        hoverinfo="x+y",
+		hovertemplate= "x: %{x}<br>"+"y: %{y}",
     )
              
 	return Fig
 
 def Picture():
 	config = {
-		#"modeBarButtonsToAdd": [
-		#    "drawrect",
-		#    "eraseshape",
-		#],
 		"displayModeBar": False,
 		"doubleClick":"reset"
 	}
@@ -284,13 +302,13 @@ def Picture():
 						id="picture", config=config,
 					),
 				]),
-			]),
+			], className="metaform"),
            	dbc.Row([
 		       	dbc.Col([
 					html.Div(
 						children=[
 						    html.Div(children="Name", className="menu-title"),
-						    dbc.Input(children="Select", id="picture-nameperson"),
+						    dbc.Input(placeholder='Enter a Name...', type="text", id="picture-nameperson"),
 						]
 					), 
 				], width=12-3),
@@ -302,47 +320,94 @@ def Picture():
 						]
 					),
 				], width=3),
-		    ]),   
+		    ], className="metaform"),   
 		],
-		#className = "menu",
 	)
 	
-@app.callback(
-	[Output('picture-nameperson', 'disabled'), Output('picture-addperson', 'disabled')],
-	[Input('picture-addperson','n_clicks')])
-def update(nclicks):
-	return [True, True]
-	
 	
 @app.callback(
-	[Output('picture','figure')],
-	[Input('PhotoSelectDropdown', "value"), Input('var_path', "children")],
-	)
-def update_dropdowns(filename, directory):
-	if filename is None or directory is None:
-		return [CreatePictureFig(None)]
-	else:
-		Path =  directory + filename
-		return [CreatePictureFig(Path)]
-		
-@app.callback(
-	[Output('null_clickdata', 'children'), Output("picture","figure")],
-	[Input('picture', 'clickData')],
-	[State('picture','figure')],
+	[
+		Output('picture','figure'),
+		Output('null_clickdata', 'children'),
+		Output('picture-nameperson', 'disabled'),
+		Output('picture-addperson', 'disabled')
+	],
+	[
+		Input('PhotoSelectDropdown', "value"),
+		Input('picture', 'clickData')
+	],
+	[
+		State('var_path', "children"),
+		State('picture','figure')
+	],
 	prevent_initial_call = True
 	)
-def update_click(clickData, fig):
-	x = clickData["points"][0]["x"]
-	y = clickData["points"][0]["y"]
-	xy = "(%s,%s)" % (x,y)
+def update_figure(filename, clickData, directory, fig):
+	if ctx.triggered_id == "PhotoSelectDropdown":
+		if filename is None or directory is None:
+			return [CreatePictureFig(None), "(0,0)", True, True]
+		else:
+			Path =  directory + filename
+			return [CreatePictureFig(Path), "(0,0)", True, True]
+			
+	elif ctx.triggered_id == "picture":
 	
-	fig["data"][1]["x"] = [x]
-	fig["data"][1]["y"] = [y]
-	fig["data"][1]["marker"]["size"] = 20
+			x = clickData["points"][0]["x"]
+			y = clickData["points"][0]["y"]
+			xy = "(%s,%s)" % (x,y)
+			
+			fig["data"][1]["x"] = [x]
+			fig["data"][1]["y"] = [y]
+			fig["data"][1]["marker"]["size"] = 20
+			
+			return [fig, xy, False, False]
+		
+@app.callback(
+	[
+		Output('picture-nameperson','value'),
+		Output('var_people', 'children'), 
+		Output('var_people_xy', 'children')
+	],
+	[
+		Input('picture-addperson', "n_clicks"),
+		Input( {'type': 'dynamic-deleteperson', 'index': ALL} , 'n_clicks'),
+	],
+	[
+		State('picture-nameperson', "value"), 
+		State('null_clickdata', 'children'), 
+		State('var_people', 'children'), 
+		State('var_people_xy', 'children')
+	],
+	prevent_initial_call = True
+	)
+def update_peopleList(
+		nclicks,
+		nclicks_del,
+		
+		Name,
+		Coords,
+		ps,
+		xys,
+	):
+	if ctx.triggered_id == "picture-addperson":
+		if Name is None:
+			pass
+		elif Name in ps:
+			index = ps.index(Name)
+			xys[index] = Coords
+		else:
+			ps.append(Name)
+			xys.append(Coords)
+	elif ctx.triggered_id["type"] == "dynamic-deleteperson":
+		index = int(ctx.triggered_id["index"])
+		ps.pop(index)
+		xys.pop(index)
+		
+	return [None, ps, xys]
+	
 	
 
-	return [xy, fig]
-	
+
 	
 
 ################################################################################################################
@@ -350,14 +415,51 @@ def update_click(clickData, fig):
 ################################################################################################################
 
 def PeopleList(ps=metaTemplateDefault["people"], xys=metaTemplateDefault["people_xy"]):
-	people = []
-	for pi, xysi in zip(ps, xys):
-		print(pi, xysi)
-		#TODO
-	return html.Div(
-		children = people,
-		id="metadata_people"
-	)
+	children = []
+	N=0
+	
+	if len(ps) > 0:
+		for pi, xysi in zip(ps, xys):
+			if pi is None:
+				continue
+			row = dbc.Row([
+				dbc.Col([
+					html.H5(
+						children="%s %s" % (pi, xysi),
+						className="",
+					)
+				], width=12-3),
+				dbc.Col([
+					dbc.Button(
+						children="Delete",
+						id={
+								'type': 'dynamic-deleteperson',
+								'index': N
+						},
+						n_clicks=0,
+						className="button"
+					)
+				], width=3),
+			])	
+			children.append(row)
+	  
+			N+=1
+			
+		return html.Div(
+			children = children
+		)
+	else:
+		row = dbc.Row([
+				dbc.Col([
+					html.H5(
+						children="Start tagging people!",
+						className="",
+					)
+				], width=12),
+		])
+		return html.Div(
+			children = [row]
+		) 
 
 def Data():
 	return html.Div(
@@ -401,9 +503,10 @@ def Data():
 		                className="menu-title",
 		            ),
                 ]),
-                dbc.Row([
-               		PeopleList(),
-                ]),
+                dbc.Row(
+               		children=[PeopleList()],
+               		id="metadata_people"
+                ),
                 #Caption
             	dbc.Row([
 		            html.Div(
@@ -422,14 +525,15 @@ def Data():
 				#Submit
             	dbc.Row([
 		            html.Div(
-		                children="Submit",
+		                children="\n",
 		                className="menu-title",
 		            ),    
                 ]),
                 dbc.Row([
-					html.Button(
+					dbc.Button(
 						children='Submit', 
 						id="metadata_submitbutton",
+						n_clicks=0, className=""
 					),
 				]),
             ],
@@ -440,27 +544,63 @@ def Data():
 	)
 	
 @app.callback(
-	[Output('var_title','children')],
-	[Input('metadata_title', "value")],
+	[
+		Output('var_title','children')
+	],
+	[
+		Input('metadata_title', "value")
+	],
+	[
+	
+	],
 	prevent_initial_call = True
 	)
-def update(text):
+def update_metaTitle(text):
 	return [text]
 	
 @app.callback(
-	[Output('var_date','children')],
-	[Input('metadata_date', "date")],
+	[
+		Output('var_date','children')
+	],
+	[
+		Input('metadata_date', "date")
+	],
+	[
+	
+	],
 	prevent_initial_call = True
 	)
-def update(date):
+def update_metaData(date):
 	return [date]
 	
 @app.callback(
-	[Output('var_caption','children')],
-	[Input('metadata_caption', "value")],
+	[
+		Output('metadata_people','children')
+	],
+	[
+		Input('var_people', 'children'), 
+	],
+	[
+		State('var_people_xy', 'children')
+	],
 	prevent_initial_call = True
 	)
-def update(text):
+def update_metaPeople(ps, xys):
+	return [PeopleList(ps=ps, xys=xys)]
+	
+@app.callback(
+	[
+		Output('var_caption','children')
+	],
+	[
+		Input('metadata_caption', "value")
+	],
+	[
+	
+	],
+	prevent_initial_call = True
+	)
+def _metaCaption(text):
 	return [text]
 
 ################################################################################################################
