@@ -48,7 +48,6 @@ body {
     margin-right: 5%;
 }
 
-
 .card {
     margin-top: 10px;
     margin-bottom: 10px;
@@ -60,11 +59,21 @@ body {
 
 .menu {
     height: 112px;
-    width: 912px;
+    width: auto;
     display: flex;
     justify-content: space-evenly;
     padding-top: 24px;
-    margin: -80px auto 0 auto;
+    
+    margin-top: -80px ;
+    margin-bottom: 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+    
+    padding-right: 24px;
+    padding-left: 24px;
+    padding-top: 24px;
+    padding-bottom: 24px;
+    
     background-color: #FFFFFF;
     box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.18);
 }
@@ -93,9 +102,17 @@ body {
     background-color: #222222;
 }
 
+.dropdownFill {
+    width: 100%;
+    display': flex;
+    background-color: #FFFFFF;
+    
+}
+
 .Select-control {
     width: 256px;
     height: 48px;
+    
 }
 
 .Select--single > .Select-control .Select-value, .Select-placeholder {
@@ -111,6 +128,21 @@ body {
     font-weight: bold;
     color: #079A82;
 }
+
+
+.DateInput_input {
+	color: inherit !important;
+	text-align: center;
+	font-size: inherit ! important;
+	Height: inherit !important;
+	Width: inherit !important;
+	padding-left: 3px !important;
+	padding-right: 3px !important;
+}
+
+/* ---–––––––––––––––––––––––––––––––––––––––––––––––
+- Rows Cols
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 
 /* ---–––––––––––––––––––––––––––––––––––––––––––––––
 - Rows Cols

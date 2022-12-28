@@ -63,12 +63,13 @@ dt_big = 5
 
 metaTemplateDefault = {
 	#"path" : "photos"+os.sep+"input"+os.sep,
-	"path" : "/home/joseph/Desktop/Photos"+os.sep,
+	"path" : "/home/joseph/Desktop/Photos",
 	"filename" : "",
 	"code" : "",
 	
 	"title": "",
 	"date": "",
+	"location": "",
 	"caption": "",
 	"people": [],
 	"people_xy": [],
@@ -148,6 +149,10 @@ def VariableContainers(Dat=metaTemplateDefault):
 				children=Dat['date'],
 			),
 			html.H1(
+				id='var_location',
+				children=Dat['location'],
+			),
+			html.H1(
 				id='var_caption',
 				children=Dat['caption'],
 			),
@@ -173,54 +178,72 @@ def VariableContainers(Dat=metaTemplateDefault):
 ################################################################################################################
 # Menu Selection
 ################################################################################################################
-
+			
 def PathSelect():
 	return html.Div(
-		children=[
-		    html.Div(
 		        children=[
-		            html.Div(children="Pick photo path", className="menu-title"),
-		            dbc.Button(children="Select", id="PathButton", n_clicks=0, className="")
-		        ]
-		    ),
-		    html.Div(
-		        children=[
-		            html.Div(children="Photo", className="menu-title"),
-		            dcc.Dropdown(
-		                id="PhotoSelectDropdown",
-		                options=[],
-		                value="organic",
-		                clearable=False,
-		                searchable=False,
-		                className="dropdown",
-		                placeholder=None,
-		            ),
-		        ],
-		    ),
-		],
-		className="menu",
+		        	dbc.Col([
+		        	dbc.Row([
+		        		dbc.Col([
+		            	html.Div(children="Pick photo path", className="menu-title"),
+		            	], width=6),
+		            	
+		            	dbc.Col([
+		            	html.Div(children="Photo", className="menu-title"),
+		            	], width=6)
+		            ]),
+		            dbc.Row([
+		            	dbc.Col([
+		            		dbc.Input(
+								id="path_textInput",
+								type='text',
+								value=metaTemplateDefault['path'],
+								debounce=True,		
+							),	
+		            	], width=6-2),
+						dbc.Col([
+							dbc.Button(children="Select", id="path_buttonInput", n_clicks=0)
+		            	], width=2),
+		            	
+		            	dbc.Col([
+		            	dcc.Dropdown(
+				            id="PhotoSelectDropdown",
+				            options=[],
+				            value="organic",
+				            clearable=False,
+				            searchable=False,
+				            placeholder="Select a photo...",
+				            style={"display":"fill", "width":"100%"}
+		            	),
+		            	], width=6)
+		        	])
+			])], className="menu",
 	)
 	
 @app.callback(
 	[
-		Output('var_path', 'children')
+		Output('var_path', 'children'),
+		Output('path_textInput', 'value')
 	],
 	[
-		Input("PathButton", "n_clicks")
+		Input("path_buttonInput", "n_clicks"),
+		Input("path_textInput", "value")
 	],
 	[
 		State("var_path", "children")
 	],
 	prevent_initial_call = True
 	)
-def update_photoPath(n_clicks, FolderDir):
-	if n_clicks == 0:
-		return [FolderDir]
-	path = easygui.diropenbox(default=FolderDir)
-	if path is None:
-		return [FolderDir]
-	else:	
-		return [path+os.sep]
+def update_photoPath(n_clicks, text, FolderDir):
+	if ctx.triggered_id == "path_buttonInput":
+		path = easygui.diropenbox(default=FolderDir)
+		if path is None:
+			return [FolderDir, FolderDir]
+
+	elif ctx.triggered_id == "path_textInput":
+		path = text
+
+	return [path, path]
 
 @app.callback(
 	[
@@ -236,10 +259,13 @@ def update_photoPath(n_clicks, FolderDir):
 	prevent_initial_call = False
 	)
 def update_photoDropdowns(Dir):
-	globed = glob.glob(Dir+"*")
+	globed = glob.glob(Dir+os.sep+"*")
 	options = []
 	for f in globed:
-		filename = f.split(Dir)[1]
+		if f.endswith(".png")+f.endswith(".jpg")+f.endswith(".jpeg") != 1:
+			continue
+			
+		filename = f.split(Dir)[1][1:]
 		options.append({'label': filename.split(".")[0], 'value': filename})
 	options = sorted(options, key=lambda d: d['value']) 
 	return options, None
@@ -308,15 +334,28 @@ def Picture():
 					html.Div(
 						children=[
 						    html.Div(children="Name", className="menu-title"),
-						    dbc.Input(placeholder='Enter a Name...', type="text", id="picture-nameperson"),
+						    dbc.Input(
+						    	placeholder='Enter a Name...',
+						    	type="text",
+						    	id="picture-nameperson",
+						    	debounce=True
+						    ),
 						]
 					), 
 				], width=12-3),
 		       	dbc.Col([
 					html.Div(
 						children=[
-						    html.Div(children="Add", className="menu-title"),
-						    dbc.Button(children="Select", id="picture-addperson", n_clicks=0, className="")
+						    html.Div(
+						    	children="Add", 
+						    	className="menu-title"
+						    ),
+						    dbc.Button(
+						    	children="Select", 
+						    	id="picture-addperson",
+						    	n_clicks=0,
+						    	className=""
+						    )
 						]
 					),
 				], width=3),
@@ -347,7 +386,7 @@ def update_figure(filename, clickData, directory, fig):
 		if filename is None or directory is None:
 			return [CreatePictureFig(None), "(0,0)", True, True]
 		else:
-			Path =  directory + filename
+			Path =  directory + os.sep + filename
 			return [CreatePictureFig(Path), "(0,0)", True, True]
 			
 	elif ctx.triggered_id == "picture":
@@ -474,14 +513,15 @@ def Data():
                     ),
                 ]),
                 dbc.Row([
-					dcc.Input(
+					dbc.Input(
 						placeholder='Enter a title...',
 						id="metadata_title",
 						type='text',
-						value='',					
+						value='',	
+						debounce=True					
 					),	    
-            	#Datepicker
             	]),
+            	#Datepicker
                 dbc.Row([
 		            html.Div(
 		                children="Date",
@@ -491,11 +531,35 @@ def Data():
                 dbc.Row([
 		            dcc.DatePickerSingle(
 						id="metadata_date",
-						date=date.today(),
-		                min_date_allowed=date.fromisoformat('1800-01-01'),
+						date=None,
+						placeholder="Pick a date...",
+						
+						month_format='MMMM Y',
+						display_format='Do MMM Y',
+						
+						clearable=True, 
+						initial_visible_month=date(2017, 8, 5),
+		                min_date_allowed=date(1800, 1, 1),
 		                max_date_allowed=date.today(),
+		                
 		            ),
                 ]),
+                #Title
+            	dbc.Row([
+		            html.Div(
+		                children="Location",
+		                className="menu-title",
+                    ),
+                ]),
+                dbc.Row([
+					dbc.Input(
+						placeholder='Enter a location...',
+						id="metadata_location",
+						type='text',
+						value='',		
+						debounce=True				
+					),	    
+            	]),
                 #Person select unselect
                 dbc.Row([
 		            html.Div(
@@ -515,10 +579,11 @@ def Data():
                     ),
                 ]),
                 dbc.Row([
-					dcc.Textarea(
-						placeholder='Enter a caption',
+                	dbc.Textarea(
+						placeholder='Enter a caption...',
 						value='',	
-						id="metadata_caption",				
+						id="metadata_caption",		
+						n_blur=0,		
 					),
 				]),
 				
@@ -572,6 +637,21 @@ def update_metaTitle(text):
 	)
 def update_metaData(date):
 	return [date]
+	
+@app.callback(
+	[
+		Output('var_location','children')
+	],
+	[
+		Input('metadata_location', "value")
+	],
+	[
+	
+	],
+	prevent_initial_call = True
+	)
+def update_metaLoc(loc):
+	return [loc]
 	
 @app.callback(
 	[
@@ -632,13 +712,9 @@ app.layout = html.Div(
         Banner(),
         VariableContainers(),
         PathSelect(),
-        dbc.Row(
-        	html.Div(),
-        ),
+
+        Main()
         
-        dbc.Row(
-        	Main()
-        )
     ]
 )
 			
