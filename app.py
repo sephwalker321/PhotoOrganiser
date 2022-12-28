@@ -8,6 +8,10 @@ Contents:
 Author: Joseph Walker j.j.walker@durham.ac.uk
 ============================================================================"""
 
+#TODO Date format is wrong
+#Delete and updating the People is wrong on read in...
+
+
 ################################################################################################################
 # Imports and Set Up
 ################################################################################################################
@@ -42,9 +46,10 @@ import json
 #Command lines
 import sys, getopt
 import os
-import time
+
 import glob
-from datetime import date
+from datetime import date, datetime
+
 
 import easygui
 
@@ -61,9 +66,12 @@ dt_big = 5
 # Hyperparameter Loading
 #######################
 
-metaTemplateDefault = {
-	#"path" : "photos"+os.sep+"input"+os.sep,
-	"path" : "/home/joseph/Desktop/Photos",
+DefaultPath = "photos"+os.sep+"input"+os.sep
+DefaultPath = "/home/joseph/Desktop/Photos"
+
+ExcelName = "PhotoDF.xlsx"
+
+DefaultVar = {
 	"filename" : "",
 	"code" : "",
 	
@@ -71,8 +79,8 @@ metaTemplateDefault = {
 	"date": "",
 	"location": "",
 	"caption": "",
-	"people": [],
-	"people_xy": [],
+	"people": "",
+	"people_xy": "",
 	
 	"lastedit": "",	
 }
@@ -80,15 +88,31 @@ metaTemplateDefault = {
 #######################
 # Read In Markdown
 #######################
-
-text_markdown = "\n \t"
-with open('assets'+os.sep+'LoadInfo.md') as this_file:
-    for a in this_file.read():
-        if "\n" in a:
-            text_markdown += "\n \t"
-        else:
-            text_markdown += a
             
+def GetExcel(path=DefaultPath):
+	ExcelPath = path + os.sep + ExcelName
+	isExist = os.path.exists(ExcelPath)
+	if isExist:
+		Excel = pd.read_excel(ExcelPath, index_col=0)
+				
+		#Excel["date"].astype(str)#.strftime("%d/%m/%Y")
+		#Excel["lastedit"].astype(str)#.strftime("%d/%m/%Y %H:%M:%S")
+		
+	else:
+		Excel = pd.DataFrame(data=[{
+			"path" : path,
+			"filename" : DefaultVar["filename"],
+			"code" : DefaultVar["code"],
+			"title": DefaultVar["title"],
+			"date": DefaultVar["date"],
+			"location": DefaultVar["location"],
+			"caption": DefaultVar["caption"],
+			"people": DefaultVar["people"],
+			"people_xy": DefaultVar["people_xy"],
+			"lastedit": DefaultVar["lastedit"],	
+		}], index=[0])
+	Excel = json.dumps(Excel.to_json())
+	return Excel
            
 
 ################################################################################################################
@@ -124,14 +148,27 @@ def Banner():
             className="header",
         )
         
-def VariableContainers(Dat=metaTemplateDefault):
+def AlbumVarContainers(path=DefaultPath, Excel=GetExcel()):
 	return html.Div( 
 		style={'display': 'none'},
 		children = [
 			html.H1(
 				id='var_path',
-				children=Dat['path'],
+				children=path,
 			),
+			html.H1(
+				id='ExcelSheet',
+				children=Excel,
+			),
+		]
+	)
+     
+def VariableContainers(
+		Dat = DefaultVar
+	):		
+	return html.Div( 
+		style={'display': 'none'},
+		children = [
 			html.H1(
 				id='var_filename',
 				children=Dat['filename'],
@@ -169,6 +206,10 @@ def VariableContainers(Dat=metaTemplateDefault):
 				children=Dat['lastedit'],
 			),
 			html.H1(
+				id='null_submitPhoto',
+				children="",
+			),
+			html.H1(
 				id='null_clickdata',
 				children="",
 			),
@@ -197,7 +238,7 @@ def PathSelect():
 		            		dbc.Input(
 								id="path_textInput",
 								type='text',
-								value=metaTemplateDefault['path'],
+								value=DefaultPath,
 								debounce=True,		
 							),	
 		            	], width=6-2),
@@ -369,7 +410,8 @@ def Picture():
 		Output('picture','figure'),
 		Output('null_clickdata', 'children'),
 		Output('picture-nameperson', 'disabled'),
-		Output('picture-addperson', 'disabled')
+		Output('picture-addperson', 'disabled'),
+		Output('var_filename', 'children'),
 	],
 	[
 		Input('PhotoSelectDropdown', "value"),
@@ -377,29 +419,31 @@ def Picture():
 	],
 	[
 		State('var_path', "children"),
+		State('var_filename', 'children'),
 		State('picture','figure')
 	],
 	prevent_initial_call = True
 	)
-def update_figure(filename, clickData, directory, fig):
+def update_figure(dropdownfilename, clickData, directory, filename, fig):
 	if ctx.triggered_id == "PhotoSelectDropdown":
-		if filename is None or directory is None:
-			return [CreatePictureFig(None), "(0,0)", True, True]
+		if dropdownfilename is None or directory is None:
+			
+			return [CreatePictureFig(None), "(0-0)", True, True, filename]
 		else:
-			Path =  directory + os.sep + filename
-			return [CreatePictureFig(Path), "(0,0)", True, True]
+			Path =  directory + os.sep + dropdownfilename
+			return [CreatePictureFig(Path), "(0-0)", True, True, dropdownfilename]
 			
 	elif ctx.triggered_id == "picture":
 	
 			x = clickData["points"][0]["x"]
 			y = clickData["points"][0]["y"]
-			xy = "(%s,%s)" % (x,y)
+			xy = "(%s-%s)" % (x,y)
 			
 			fig["data"][1]["x"] = [x]
 			fig["data"][1]["y"] = [y]
 			fig["data"][1]["marker"]["size"] = 20
 			
-			return [fig, xy, False, False]
+			return [fig, xy, False, False, dropdownfilename]
 		
 @app.callback(
 	[
@@ -428,20 +472,44 @@ def update_peopleList(
 		ps,
 		xys,
 	):
+	
+	
+	pslist= ps.split(",")
+	xyslist = xys.split(",")
+	if "" in pslist:
+		pslist.remove("")
+	if "" in xyslist:
+		xyslist.remove("")			
 	if ctx.triggered_id == "picture-addperson":
 		if Name is None:
 			pass
 		elif Name in ps:
-			index = ps.index(Name)
-			xys[index] = Coords
+			index = pslist.index(Name)
+			xyslist[index] = Coords
+			ps = ""
+			xys = ""
+			for i in range(len(pslist)):
+				ps += pslist[i] + ","
+				xys += xyslist[i] + ","
 		else:
-			ps.append(Name)
-			xys.append(Coords)
-	elif ctx.triggered_id["type"] == "dynamic-deleteperson":
-		index = int(ctx.triggered_id["index"])
-		ps.pop(index)
-		xys.pop(index)
+			ps += Name + ","
+			xys += Coords + ","
+			
+	elif ctx.triggered_id  is None:
+		return  [None, ps, xys]
 		
+	elif ctx.triggered_id["type"] == "dynamic-deleteperson":
+		
+		
+		index = int(ctx.triggered_id["index"])
+		pslist.pop(index)
+		xyslist.pop(index)
+		
+		ps = ""
+		xys = ""
+		for i in range(len(pslist)):
+			ps += pslist[i] + ","
+			xys += xyslist[i] + ","
 	return [None, ps, xys]
 	
 	
@@ -453,12 +521,19 @@ def update_peopleList(
 # Meta Data
 ################################################################################################################
 
-def PeopleList(ps=metaTemplateDefault["people"], xys=metaTemplateDefault["people_xy"]):
+def PeopleList(ps="", xys=""):
 	children = []
-	N=0
+	N=0	
 	
-	if len(ps) > 0:
-		for pi, xysi in zip(ps, xys):
+	pslist= ps.split(",")
+	xyslist = xys.split(",")
+	if "" in pslist:
+		pslist.remove("")
+	if "" in xyslist:
+		xyslist.remove("")
+	
+	if len(pslist) > 0:
+		for pi, xysi in zip(pslist, xyslist):
 			if pi is None:
 				continue
 			row = dbc.Row([
@@ -538,7 +613,7 @@ def Data():
 						display_format='Do MMM Y',
 						
 						clearable=True, 
-						initial_visible_month=date(2017, 8, 5),
+						initial_visible_month=date.today(),
 		                min_date_allowed=date(1800, 1, 1),
 		                max_date_allowed=date.today(),
 		                
@@ -598,7 +673,7 @@ def Data():
 					dbc.Button(
 						children='Submit', 
 						id="metadata_submitbutton",
-						n_clicks=0, className=""
+						n_clicks=0
 					),
 				]),
             ],
@@ -610,48 +685,69 @@ def Data():
 	
 @app.callback(
 	[
-		Output('var_title','children')
+		Output('var_title','children'),
+		Output('metadata_title', "value"),
 	],
 	[
-		Input('metadata_title', "value")
+		Input('metadata_title', "value"),
+		Input('var_title','children'),
 	],
 	[
 	
 	],
 	prevent_initial_call = True
 	)
-def update_metaTitle(text):
-	return [text]
+def update_metaTitle(text, Exceltext):
+	if ctx.triggered_id == "metadata_title":
+		return [text, text]
+	elif ctx.triggered_id == "var_title":
+		return [Exceltext, Exceltext]
 	
 @app.callback(
 	[
-		Output('var_date','children')
+		Output('var_date','children'),
+		Output('metadata_date', "date"),
 	],
 	[
-		Input('metadata_date', "date")
+		Input('metadata_date', "date"),
+		Input('var_date','children'),
 	],
 	[
 	
 	],
 	prevent_initial_call = True
 	)
-def update_metaData(date):
-	return [date]
+def update_metaData(date, Exceldate):
+	if ctx.triggered_id == "metadata_date":
+		return [date, date]
+		
+	return [None, None]
+	
+	#TODO Fix Date issue
+	#elif ctx.triggered_id == "var_date":
+	#	if Exceldate == "":
+	#		Exceldate = None 
+	#	return [Exceldate, Exceldate]
 	
 @app.callback(
 	[
-		Output('var_location','children')
+		Output('var_location','children'),
+		Output('metadata_location', "value"),
 	],
 	[
-		Input('metadata_location', "value")
+		Input('metadata_location', "value"),
+		Input('var_location','children'),
 	],
 	[
 	
 	],
 	prevent_initial_call = True
 	)
-def update_metaLoc(loc):
-	return [loc]
+def update_metaLoc(loc, locExcel):
+	if ctx.triggered_id == "metadata_location":
+		return [loc, loc]
+	elif ctx.triggered_id == "var_location":
+		return [locExcel, locExcel]
 	
 @app.callback(
 	[
@@ -667,21 +763,145 @@ def update_metaLoc(loc):
 	)
 def update_metaPeople(ps, xys):
 	return [PeopleList(ps=ps, xys=xys)]
+
 	
 @app.callback(
 	[
-		Output('var_caption','children')
+		Output('var_caption','children'),
+		Output('metadata_caption', "value"),
 	],
 	[
-		Input('metadata_caption', "value")
+		Input('metadata_caption', "value"),
+		Input('var_caption','children'),
 	],
 	[
 	
 	],
 	prevent_initial_call = True
 	)
-def _metaCaption(text):
-	return [text]
+def update_metaCaption(text, textExcel):
+	if ctx.triggered_id == "metadata_caption":
+		return [text, text]
+	elif ctx.triggered_id == "var_caption":
+		return [textExcel, textExcel]
+	
+@app.callback(
+	[
+		Output('null_submitPhoto','children'),
+		Output('ExcelSheet','children')
+	],
+	[
+		Input('metadata_submitbutton', "n_clicks")
+	],
+	[
+		State("ExcelSheet","children"),
+		State('var_path', 'children'),
+		State('var_filename', 'children'),
+		State('var_code', 'children'),
+		State('var_title', 'children'),
+		State('var_date', 'children'),
+		State('var_location', 'children'),
+		State('var_caption', 'children'),
+		State('var_people', 'children'),
+		State('var_people_xy', 'children'),
+	],
+	prevent_initial_call = True
+	)
+def submit_phototoexcel(
+		n_clicks,
+		
+		Excel, 
+		
+		path,
+		filename,
+		code,
+		title,
+		meta_date,
+		location,
+		caption,
+		people,
+		people_xy,	
+	):
+	if filename == "":
+		return ["", Excel]
+		
+	if filename is None:
+		filename = DefaultVar["filename"]
+	if code is None:
+		code = DefaultVar["code"]
+	if title is None:
+		title = DefaultVar["title"]
+	if meta_date is None:
+		meta_date = DefaultVar["date"]
+	if caption is None:
+		caption = DefaultVar["caption"]
+	if people is None:
+		people = DefaultVar["people"]
+	if people_xy is None:
+		people_xy = DefaultVar["people_xy"]
+		
+	df_i = pd.DataFrame(data=[{
+		"path" : path,
+		"filename" : filename,
+		"code" : code,
+		"title": title,
+		"date": meta_date,
+		"location": location,
+		"caption": caption,
+		"people": people,
+		"people_xy": people_xy,
+		"lastedit": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),	
+	}], index=[0])
+	
+	Excel = pd.read_json(json.loads(Excel), orient='columns')
+	if filename in Excel["filename"].values: #Updating
+		Excel[Excel["filename"] == filename] = df_i.values
+		
+	else: #Adding new one
+		Excel = pd.concat([Excel, df_i], ignore_index=True)
+
+		
+	ExcelPath = path + os.sep + ExcelName
+	
+	Excel = Excel[Excel.filename != ""]
+	with pd.ExcelWriter(ExcelPath) as writer:
+		Excel.to_excel(writer)  
+	return ["", json.dumps(Excel.to_json())]
+	
+
+@app.callback(
+	[
+		Output('variables','children')
+	],
+	[
+		Input('PhotoSelectDropdown', "value")
+	],
+	[
+		State("ExcelSheet","children"),
+	],
+	prevent_initial_call = True
+	)
+def update_metadata(filenamedropdown, Excel):
+	Excel = pd.read_json(json.loads(Excel), orient='columns')
+	if filenamedropdown in Excel["filename"].values: #Updating
+		Excel = Excel[Excel["filename"] == filenamedropdown]
+		Dat = {
+			"filename" : Excel["filename"].values[0],
+			"code" :  Excel["code"].values[0],
+			
+			"title":  Excel["title"].values[0],
+			"date":  Excel["date"].values[0],
+			"location":  Excel["location"].values[0],
+			"caption":  Excel["caption"].values[0],
+			"people":  Excel["people"].values[0],#TODO UNSURE
+			"people_xy":  Excel["people_xy"].values[0],#TODO UNSURE
+			
+			"lastedit":  Excel["lastedit"].values[0],	
+		}
+		return [VariableContainers(Dat=Dat)]
+	else: #Adding new one
+		return [VariableContainers()]
+
 
 ################################################################################################################
 # Main page
@@ -705,12 +925,15 @@ def Main():
 ################################################################################################################
 # Layout
 ################################################################################################################
-
-
+	
 app.layout = html.Div(
     children=[
         Banner(),
-        VariableContainers(),
+        AlbumVarContainers(),
+        html.Div(
+		    id = "variables",
+		    children=VariableContainers(),
+        ),
         PathSelect(),
 
         Main()
