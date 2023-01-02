@@ -100,6 +100,13 @@ body {
 
 .button {
     background-color: #222222;
+    vertical-align: middle;
+    
+    padding-right: 2px;
+    padding-left: 2px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    
 }
 
 .dropdownFill {
@@ -139,6 +146,12 @@ body {
 	padding-left: 3px !important;
 	padding-right: 3px !important;
 }
+
+.Locs {
+	text-align: center;
+	vertical-align: middle;
+}
+
 
 /* ---–––––––––––––––––––––––––––––––––––––––––––––––
 - Rows Cols

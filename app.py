@@ -8,8 +8,10 @@ Contents:
 Author: Joseph Walker j.j.walker@durham.ac.uk
 ============================================================================"""
 
-#TODO Date format is wrong
-#Delete and updating the People is wrong on read in...
+#TODO Order people L to R
+#TODO Documentation
+#TODO Year Select?
+#TODO Reset?
 
 
 ################################################################################################################
@@ -37,6 +39,7 @@ import numpy as np
 #Image plotting
 #import plotly.express as px
 import plotly.graph_objects as go
+import plotly.express as px
 from skimage import data
 from PIL import Image
 
@@ -81,7 +84,7 @@ DefaultVar = {
 	"caption": "",
 	"people": "",
 	"people_xy": "",
-	
+	"complete": "N",
 	"lastedit": "",	
 }
 
@@ -95,8 +98,15 @@ converters={
 	"caption": str,
 	"people": str,
 	"people_xy": str,
+	"complete": str,
 	"lastedit": str,
 }
+
+#Dropdown colors
+colourRed = "red"
+colourAmber = "orange"
+colourGreen = "green"
+colourMarker = "black"
 
 #######################
 # Read In Markdown
@@ -123,20 +133,10 @@ def GetExcel(path=DefaultPath):
 			"caption": DefaultVar["caption"],
 			"people": DefaultVar["people"],
 			"people_xy": DefaultVar["people_xy"],
+			"complete": DefaultVar["complete"],
 			"lastedit": DefaultVar["lastedit"],	
 		}], index=[0])
-		
-	print("Input from Excel")
-	print(Excel["path"].values[0], type(Excel["path"].values[0]))
-	print(Excel["filename"].values[0], type(Excel["filename"].values[0]))
-	print(Excel["code"].values[0], type(Excel["code"].values[0]))
-	print(Excel["title"].values[0], type(Excel["title"].values[0]))
-	print(Excel["date"].values[0], type(Excel["date"].values[0]))
-	print(Excel["location"].values[0], type(Excel["location"].values[0]))
-	print(Excel["caption"].values[0], type(Excel["caption"].values[0]))
-	print(Excel["people"].values[0], type(Excel["people"].values[0]))
-	print(Excel["people_xy"].values[0], type(Excel["people_xy"].values[0]))
-	
+			
 	Excel = json.dumps(Excel.to_json())
 	return Excel
            
@@ -155,7 +155,7 @@ def GetFilename(options, index):
 	if index is None:
 		return None
 	else:
-		return options[index]["label"]
+		return options[index]["label"]["props"]["children"][0]
 		
 
 
@@ -214,7 +214,6 @@ def AlbumVarContainers(path=DefaultPath, Excel=GetExcel()):
 def VariableContainers(
 		Dat = DefaultVar
 	):		
-	#print(Dat)
 	return html.Div( 
 		style={'display': 'none'},
 		children = [
@@ -249,6 +248,10 @@ def VariableContainers(
 			html.H1(
 				id='var_people_xy',
 				children=Dat['people_xy'],
+			),
+			html.H1(
+				id='var_complete',
+				children=Dat['complete'],
 			),
 			html.H1(
 				id='var_lastedit',
@@ -349,11 +352,14 @@ def update_photoPath(n_clicks, text, FolderDir):
 		Input('var_path', "children")
 	],
 	[
-	
+		State("ExcelSheet","children")
 	],
 	prevent_initial_call = False
 	)
-def update_photoDropdowns(Dir):
+def update_photoDropdowns(Dir, Excel):
+
+	Excel = ConvertStoredJSON(Excel)
+		
 	globed = glob.glob(Dir+os.sep+"*")
 	globed.sort()
 	options = []
@@ -363,7 +369,20 @@ def update_photoDropdowns(Dir):
 			continue
 			
 		filename = f.split(Dir)[1][1:]
-		options.append({'label': filename, 'value': N})
+		
+		C = colourRed #Default Colour
+		if filename in Excel["filename"].values: #Updating
+			complete = Excel[Excel["filename"] == filename]["complete"].values
+			if complete == "Y":
+				C = colourGreen
+			elif complete == "N":
+				C = colourAmber
+		
+		
+		options.append({
+			'label': html.Span([filename], style={'color': C}),
+			'value': N
+		})
 		N+=1
 	options = sorted(options, key=lambda d: d['value']) 
 	return [options]
@@ -426,34 +445,26 @@ def CreatePictureFig(Path):
 		xshape = img.size[0]
 		yshape = img.size[1]
 		
-	
-	Fig = go.Figure(
 	layout = {
 		"autosize":True,
 		"margin" : {"l":10,"r":10,"t":10,"b":10},
 		"xaxis_range": [0, xshape],
 		"yaxis_range": [yshape, 0],
-		}
-	)
-	Fig.add_trace(
-		go.Image(
-			name="",
-			z=np.array(img),
-			colormodel='rgb',
-			hoverinfo="x+y+z",
-			hovertemplate= "x: %{x}<br>"+"y: %{y}<br>"+"z: %{z}",
-		)
-	)
+	}
 	
+	# Add image
+	Fig = px.imshow(img)
 	Fig.add_scatter(
-		x=[0], y=[0],
+		x=[-100], y=[-100],
+		opacity=.8,
 		mode="markers",
-        marker=dict(size=0, color="LightSeaGreen"),
-        name="", 
-        hoverinfo="x+y",
+        	marker=dict(size=20, symbol="x-thin", color=colourMarker, line=dict(width=5, color=colourMarker)),
+        	name="", 
+        	hoverinfo="x+y",
 		hovertemplate= "x: %{x}<br>"+"y: %{y}",
-    )
-             
+    	)
+    	
+	Fig.update_layout(layout)             
 	return Fig
 
 def Picture():
@@ -530,16 +541,16 @@ def update_figure(dropdownindex, clickData, dropdownoptions, directory, filename
 	if ctx.triggered_id == "PhotoSelectDropdown":
 		if dropdownfilename is None or directory is None:
 			
-			return [CreatePictureFig(None), "(0-0)", True, True, filename]
+			return [CreatePictureFig(None), "(0,0)", True, True, filename]
 		else:
 			Path =  directory + os.sep + dropdownfilename
-			return [CreatePictureFig(Path), "(0-0)", True, True, dropdownfilename]
+			return [CreatePictureFig(Path), "(0,0)", True, True, dropdownfilename]
 			
 	elif ctx.triggered_id == "picture":
 	
 			x = clickData["points"][0]["x"]
 			y = clickData["points"][0]["y"]
-			xy = "(%s-%s)" % (x,y)
+			xy = "(%s,%s)" % (x,y)
 			
 			fig["data"][1]["x"] = [x]
 			fig["data"][1]["y"] = [y]
@@ -574,8 +585,8 @@ def update_peopleList(
 		ps,
 		xys,
 	):	
-	pslist= ps.split(",")
-	xyslist = xys.split(",")
+	pslist= ps.split("|")
+	xyslist = xys.split("|")
 	if "" in pslist:
 		pslist.remove("")
 	if "" in xyslist:
@@ -590,11 +601,11 @@ def update_peopleList(
 			ps = ""
 			xys = ""
 			for i in range(len(pslist)):
-				ps += pslist[i] + ","
-				xys += xyslist[i] + ","
+				ps += pslist[i] + "|"
+				xys += xyslist[i] + "|"
 		else:
-			ps += Name + ","
-			xys += Coords + ","
+			ps += Name + "|"
+			xys += Coords + "|"
 			
 	elif ctx.triggered_id  is None:
 		return  [None, ps, xys]
@@ -608,8 +619,8 @@ def update_peopleList(
 			ps = ""
 			xys = ""
 			for i in range(len(pslist)):
-				ps += pslist[i] + ","
-				xys += xyslist[i] + ","
+				ps += pslist[i] + "|"
+				xys += xyslist[i] + "|"
 	return [None, ps, xys]
 	
 ################################################################################################################
@@ -620,12 +631,14 @@ def PeopleList(ps="", xys=""):
 	children = []
 	N=0	
 	
-	pslist= ps.split(",")
-	xyslist = xys.split(",")
+	pslist= ps.split("|")
+	xyslist = xys.split("|")
 	if "" in pslist:
 		pslist.remove("")
 	if "" in xyslist:
 		xyslist.remove("")
+		
+	#TODO Order L to R?
 	
 	if len(pslist) > 0:
 		for pi, xysi in zip(pslist, xyslist):
@@ -633,9 +646,9 @@ def PeopleList(ps="", xys=""):
 				continue
 			row = dbc.Row([
 				dbc.Col([
-					html.H5(
+					html.Div(
 						children="%s %s" % (pi, xysi),
-						className="",
+						className="Locs",
 					)
 				], width=12-3),
 				dbc.Col([
@@ -660,9 +673,9 @@ def PeopleList(ps="", xys=""):
 	else:
 		row = dbc.Row([
 				dbc.Col([
-					html.H5(
+					html.Div(
 						children="Start tagging people!",
-						className="",
+						className="Locs",
 					)
 				], width=12),
 		])
@@ -756,8 +769,26 @@ def Data():
 						n_blur=0,		
 					),
 				]),
+		#Is Photo documentation complete?
+            	dbc.Row([
+		            html.Div(
+		                children="Complete",
+		                className="menu-title",
+                    ),
+                ]),
+		dbc.Row([
+                	dcc.RadioItems(
+						options=[
+							{"label":html.Span(["Yes"], style={'padding-left': 3, 'padding-right': 10}), "value":"Y"},
+							{"label":html.Span(["No"], style={'padding-left': 3, 'padding-right': 10}), "value":"N"},
+						],
+						value='N',	
+						id="metadata_complete",	
+
+					),
+				]),
 				
-				#Submit
+		#Submit
             	dbc.Row([
 		            html.Div(
 		                children="\n",
@@ -876,6 +907,26 @@ def update_metaCaption(text, textExcel):
 		return [text, text]
 	elif ctx.triggered_id == "var_caption":
 		return [textExcel, textExcel]
+		
+@app.callback(
+	[
+		Output('var_complete','children'),
+		Output('metadata_complete', "value"),
+	],
+	[
+		Input('metadata_complete', "value"),
+		Input('var_complete','children'),
+	],
+	[
+	
+	],
+	prevent_initial_call = True
+	)
+def update_metaComplete(Radio, RadioExcel):
+	if ctx.triggered_id == "metadata_complete":
+		return [Radio, Radio]
+	elif ctx.triggered_id == "var_complete":
+		return [RadioExcel, RadioExcel]
 	
 @app.callback(
 	[
@@ -896,6 +947,7 @@ def update_metaCaption(text, textExcel):
 		State('var_caption', 'children'),
 		State('var_people', 'children'),
 		State('var_people_xy', 'children'),
+		State('var_complete', 'children'),
 	],
 	prevent_initial_call = True
 	)
@@ -912,7 +964,8 @@ def submit_phototoexcel(
 		location,
 		caption,
 		people,
-		people_xy,	
+		people_xy,
+		complete,	
 	):
 	if filename == "":
 		return ["", Excel]
@@ -931,18 +984,9 @@ def submit_phototoexcel(
 		people = DefaultVar["people"]
 	if people_xy is None:
 		people_xy = DefaultVar["people_xy"]
-		
-	print("Output to Excel")
-	print(path, type(path))
-	print(filename, type(filename))
-	print(code, type(code))
-	print(title, type(title))
-	print(meta_date, type(meta_date))
-	print(location, type(location))
-	print(caption, type(caption))
-	print(people, type(people))
-	print(people_xy, type(people_xy))
-		
+	if complete is None:
+		complete = DefaultVar["complete"]
+				
 	df_i = pd.DataFrame(data=[{
 		"path" : path,
 		"filename" : filename,
@@ -953,6 +997,7 @@ def submit_phototoexcel(
 		"caption": caption,
 		"people": people,
 		"people_xy": people_xy,
+		"complete": complete,
 		"lastedit": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),	
 	}], index=[0])
 	
@@ -1000,6 +1045,7 @@ def update_metadata(dropdownindex, dropdownoptions, Excel):
 			"caption":  Excel["caption"].values[0],
 			"people":  Excel["people"].values[0],
 			"people_xy":  Excel["people_xy"].values[0],
+			"complete":  Excel["complete"].values[0],
 			
 			"lastedit":  Excel["lastedit"].values[0],	
 		}
