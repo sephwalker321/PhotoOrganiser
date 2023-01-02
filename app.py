@@ -85,6 +85,19 @@ DefaultVar = {
 	"lastedit": "",	
 }
 
+converters={
+	"path" : str,
+	"filename" : str,
+	"code" : str,
+	"title": str,
+	"date": str,
+	"location": str,
+	"caption": str,
+	"people": str,
+	"people_xy": str,
+	"lastedit": str,
+}
+
 #######################
 # Read In Markdown
 #######################
@@ -93,11 +106,12 @@ def GetExcel(path=DefaultPath):
 	ExcelPath = path + os.sep + ExcelName
 	isExist = os.path.exists(ExcelPath)
 	if isExist:
-		Excel = pd.read_excel(ExcelPath, index_col=0)
-				
-		#Excel["date"].astype(str)#.strftime("%d/%m/%Y")
-		#Excel["lastedit"].astype(str)#.strftime("%d/%m/%Y %H:%M:%S")
-		
+		Excel = pd.read_excel(
+			ExcelPath, 
+			index_col=0,
+			converters=converters,
+			keep_default_na=False)
+						
 	else:
 		Excel = pd.DataFrame(data=[{
 			"path" : path,
@@ -111,9 +125,39 @@ def GetExcel(path=DefaultPath):
 			"people_xy": DefaultVar["people_xy"],
 			"lastedit": DefaultVar["lastedit"],	
 		}], index=[0])
+		
+	print("Input from Excel")
+	print(Excel["path"].values[0], type(Excel["path"].values[0]))
+	print(Excel["filename"].values[0], type(Excel["filename"].values[0]))
+	print(Excel["code"].values[0], type(Excel["code"].values[0]))
+	print(Excel["title"].values[0], type(Excel["title"].values[0]))
+	print(Excel["date"].values[0], type(Excel["date"].values[0]))
+	print(Excel["location"].values[0], type(Excel["location"].values[0]))
+	print(Excel["caption"].values[0], type(Excel["caption"].values[0]))
+	print(Excel["people"].values[0], type(Excel["people"].values[0]))
+	print(Excel["people_xy"].values[0], type(Excel["people_xy"].values[0]))
+	
 	Excel = json.dumps(Excel.to_json())
 	return Excel
            
+           
+def ConvertStoredJSON(JSON):
+	Excel = pd.read_json(
+		json.loads(JSON),
+		orient='columns',
+		dtype=converters,
+	)
+
+	Excel.replace({"NaT": ""}, inplace=True)
+	return Excel
+	
+def GetFilename(options, index):
+	if index is None:
+		return None
+	else:
+		return options[index]["label"]
+		
+
 
 ################################################################################################################
 # Bootstrap Style sheet and run.
@@ -157,6 +201,10 @@ def AlbumVarContainers(path=DefaultPath, Excel=GetExcel()):
 				children=path,
 			),
 			html.H1(
+				id='var_photoindex',
+				children="",
+			),
+			html.H1(
 				id='ExcelSheet',
 				children=Excel,
 			),
@@ -166,6 +214,7 @@ def AlbumVarContainers(path=DefaultPath, Excel=GetExcel()):
 def VariableContainers(
 		Dat = DefaultVar
 	):		
+	#print(Dat)
 	return html.Div( 
 		style={'display': 'none'},
 		children = [
@@ -250,13 +299,19 @@ def PathSelect():
 		            	dcc.Dropdown(
 				            id="PhotoSelectDropdown",
 				            options=[],
-				            value="organic",
+				            value=None,
 				            clearable=False,
 				            searchable=False,
 				            placeholder="Select a photo...",
 				            style={"display":"fill", "width":"100%"}
 		            	),
-		            	], width=6)
+		            	], width=4),
+		            	dbc.Col([
+		            		dbc.Button(children="Prev", id="PhotoSelectPrev", n_clicks=0)
+		            	], width=1),
+		            	dbc.Col([
+		            		dbc.Button(children="Next", id="PhotoSelectNext", n_clicks=0)
+		            	], width=1),
 		        	])
 			])], className="menu",
 	)
@@ -288,8 +343,7 @@ def update_photoPath(n_clicks, text, FolderDir):
 
 @app.callback(
 	[
-		Output('PhotoSelectDropdown','options'),
-		Output('PhotoSelectDropdown','value')
+		Output('PhotoSelectDropdown','options')
 	],
 	[
 		Input('var_path', "children")
@@ -301,15 +355,61 @@ def update_photoPath(n_clicks, text, FolderDir):
 	)
 def update_photoDropdowns(Dir):
 	globed = glob.glob(Dir+os.sep+"*")
+	globed.sort()
 	options = []
+	N=0
 	for f in globed:
 		if f.endswith(".png")+f.endswith(".jpg")+f.endswith(".jpeg") != 1:
 			continue
 			
 		filename = f.split(Dir)[1][1:]
-		options.append({'label': filename.split(".")[0], 'value': filename})
+		options.append({'label': filename, 'value': N})
+		N+=1
 	options = sorted(options, key=lambda d: d['value']) 
-	return options, None
+	return [options]
+	
+@app.callback(
+	[
+		Output('PhotoSelectDropdown','value'),
+		Output('PhotoSelectPrev','disabled'),
+		Output('PhotoSelectNext','disabled')
+	],
+	[
+		Input('PhotoSelectDropdown','value'),
+		Input('PhotoSelectPrev', "n_clicks"),
+		Input('PhotoSelectNext', "n_clicks"),
+	],
+	[
+		State('PhotoSelectDropdown','value'),
+		State('PhotoSelectDropdown','options'),	
+	],
+	prevent_initial_call = False
+	)
+def update_photoDropdowns(photo, prev_click, next_click, index, options):
+	NOptions = len(options)
+	if index is None:
+		return [index, True, True]
+		
+	PrevDisable = False
+	NextDisable = False
+	
+
+	if ctx.triggered_id == "PhotoSelectPrev":
+		index -=  1
+	if ctx.triggered_id == "PhotoSelectNext":
+		index += 1
+		
+	if index == NOptions-1:
+		NextDisable = True
+	if index == 0:
+		PrevDisable = True
+		
+	return [index, PrevDisable, NextDisable]
+	
+	
+	
+
+
 	
 ################################################################################################################
 # Photo 
@@ -418,13 +518,15 @@ def Picture():
 		Input('picture', 'clickData')
 	],
 	[
+		State('PhotoSelectDropdown', "options"),
 		State('var_path', "children"),
 		State('var_filename', 'children'),
 		State('picture','figure')
 	],
 	prevent_initial_call = True
 	)
-def update_figure(dropdownfilename, clickData, directory, filename, fig):
+def update_figure(dropdownindex, clickData, dropdownoptions, directory, filename, fig):
+	dropdownfilename = GetFilename(dropdownoptions, dropdownindex) 
 	if ctx.triggered_id == "PhotoSelectDropdown":
 		if dropdownfilename is None or directory is None:
 			
@@ -459,7 +561,7 @@ def update_figure(dropdownfilename, clickData, directory, filename, fig):
 		State('picture-nameperson', "value"), 
 		State('null_clickdata', 'children'), 
 		State('var_people', 'children'), 
-		State('var_people_xy', 'children')
+		State('var_people_xy', 'children')		
 	],
 	prevent_initial_call = True
 	)
@@ -471,15 +573,14 @@ def update_peopleList(
 		Coords,
 		ps,
 		xys,
-	):
-	
-	
+	):	
 	pslist= ps.split(",")
 	xyslist = xys.split(",")
 	if "" in pslist:
 		pslist.remove("")
 	if "" in xyslist:
-		xyslist.remove("")			
+		xyslist.remove("")
+	
 	if ctx.triggered_id == "picture-addperson":
 		if Name is None:
 			pass
@@ -499,24 +600,18 @@ def update_peopleList(
 		return  [None, ps, xys]
 		
 	elif ctx.triggered_id["type"] == "dynamic-deleteperson":
-		
-		
 		index = int(ctx.triggered_id["index"])
-		pslist.pop(index)
-		xyslist.pop(index)
-		
-		ps = ""
-		xys = ""
-		for i in range(len(pslist)):
-			ps += pslist[i] + ","
-			xys += xyslist[i] + ","
+		if nclicks_del[index] > 0:	
+			pslist.pop(index)
+			xyslist.pop(index)
+			
+			ps = ""
+			xys = ""
+			for i in range(len(pslist)):
+				ps += pslist[i] + ","
+				xys += xyslist[i] + ","
 	return [None, ps, xys]
 	
-	
-
-
-	
-
 ################################################################################################################
 # Meta Data
 ################################################################################################################
@@ -721,13 +816,10 @@ def update_metaData(date, Exceldate):
 	if ctx.triggered_id == "metadata_date":
 		return [date, date]
 		
-	return [None, None]
-	
-	#TODO Fix Date issue
-	#elif ctx.triggered_id == "var_date":
-	#	if Exceldate == "":
-	#		Exceldate = None 
-	#	return [Exceldate, Exceldate]
+	elif ctx.triggered_id == "var_date":
+		if Exceldate == "":
+			Exceldate = None 
+		return [Exceldate, Exceldate]
 	
 @app.callback(
 	[
@@ -824,7 +916,7 @@ def submit_phototoexcel(
 	):
 	if filename == "":
 		return ["", Excel]
-		
+				
 	if filename is None:
 		filename = DefaultVar["filename"]
 	if code is None:
@@ -840,6 +932,17 @@ def submit_phototoexcel(
 	if people_xy is None:
 		people_xy = DefaultVar["people_xy"]
 		
+	print("Output to Excel")
+	print(path, type(path))
+	print(filename, type(filename))
+	print(code, type(code))
+	print(title, type(title))
+	print(meta_date, type(meta_date))
+	print(location, type(location))
+	print(caption, type(caption))
+	print(people, type(people))
+	print(people_xy, type(people_xy))
+		
 	df_i = pd.DataFrame(data=[{
 		"path" : path,
 		"filename" : filename,
@@ -853,7 +956,7 @@ def submit_phototoexcel(
 		"lastedit": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),	
 	}], index=[0])
 	
-	Excel = pd.read_json(json.loads(Excel), orient='columns')
+	Excel = ConvertStoredJSON(Excel)
 	if filename in Excel["filename"].values: #Updating
 		Excel[Excel["filename"] == filename] = df_i.values
 		
@@ -877,12 +980,14 @@ def submit_phototoexcel(
 		Input('PhotoSelectDropdown', "value")
 	],
 	[
+		Input('PhotoSelectDropdown', "options"),
 		State("ExcelSheet","children"),
 	],
 	prevent_initial_call = True
 	)
-def update_metadata(filenamedropdown, Excel):
-	Excel = pd.read_json(json.loads(Excel), orient='columns')
+def update_metadata(dropdownindex, dropdownoptions, Excel):
+	filenamedropdown = GetFilename(dropdownoptions, dropdownindex) 
+	Excel = ConvertStoredJSON(Excel)
 	if filenamedropdown in Excel["filename"].values: #Updating
 		Excel = Excel[Excel["filename"] == filenamedropdown]
 		Dat = {
@@ -893,8 +998,8 @@ def update_metadata(filenamedropdown, Excel):
 			"date":  Excel["date"].values[0],
 			"location":  Excel["location"].values[0],
 			"caption":  Excel["caption"].values[0],
-			"people":  Excel["people"].values[0],#TODO UNSURE
-			"people_xy":  Excel["people_xy"].values[0],#TODO UNSURE
+			"people":  Excel["people"].values[0],
+			"people_xy":  Excel["people_xy"].values[0],
 			
 			"lastedit":  Excel["lastedit"].values[0],	
 		}
