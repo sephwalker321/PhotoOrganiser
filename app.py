@@ -1,18 +1,33 @@
 """============================================================================
-Python Dashboard produced to monitor timeseries data with high periodicity and search for anomlous regions in the data. 
-
-Dashboard largely developed based on tutorial located at https://realpython.com/python-dash/ and inspired by https://dash-gallery.plotly.host/dash-manufacture-spc-dashboard/.
 
 Contents: 
 
 Author: Joseph Walker j.j.walker@durham.ac.uk
 ============================================================================"""
 
-#TODO Order people L to R
+#TODO Local or Remote modes
 #TODO Documentation
-#TODO Year Select?
-#TODO Reset?
+"""
+        Load config for simulator from world.yaml
 
+        Parameters
+        ----------
+        leisure
+        policies
+        interaction
+        world
+        config_filename
+            The path to the world yaml configuration
+        comment
+            A brief description of the purpose of the run(s)
+
+        Returns
+        -------
+        A Simulator
+        """
+#TODO Markdown
+
+#TODO Index codes?
 
 ################################################################################################################
 # Imports and Set Up
@@ -29,15 +44,12 @@ from dash import html
 import dash_bootstrap_components as dbc
 #Callback functions
 from dash.dependencies import Output, Input, State
-#from dash_extensions.enrich import Dash, Input, State, Output, html, dcc
 
 #Pandas for data import and management
 import pandas as pd
 import numpy as np
 
-
 #Image plotting
-#import plotly.express as px
 import plotly.graph_objects as go
 import plotly.express as px
 from skimage import data
@@ -53,26 +65,25 @@ import os
 import glob
 from datetime import date, datetime
 
-
 import easygui
 
 #######################
 # Local Parameters
 #######################
 
-#Timing for periodic refreshes
-dt_small = 1 
-dt_mid = 5 
-dt_big = 5
+Title = "Family Photo Organiser"
+Description = "Family tree photo catalogue tool"
 
-#######################
-# Hyperparameter Loading
-#######################
+#http://clipart-library.com/clip-art/2-25443_silhouette-child-drawing-family-computer-icons-silhouette-people.htm
+DemoPath = "photos" 
 
-DefaultPath = "photos"+os.sep+"input"+os.sep
+#https://clipartix.com/family-tree-clipart-image-24755/
+DemoPhoto = "assets"+os.sep+"DefaultPhoto.jpg" 
+
 DefaultPath = "/home/joseph/Desktop/Photos"
+DefaultPath = DemoPath
 
-ExcelName = "PhotoDF.xlsx"
+ExcelName = "AlbumInfo.xlsx"
 
 DefaultVar = {
 	"filename" : "",
@@ -108,9 +119,28 @@ colourAmber = "orange"
 colourGreen = "green"
 colourMarker = "black"
 
-#######################
-# Read In Markdown
-#######################
+MinYear = 1800
+MaxYear = date.today().year
+
+################################################################################################################
+# Define the app
+################################################################################################################
+
+external_stylesheets = [
+	{
+	"href": "https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css",
+	"rel": "stylesheet",
+	},
+]
+external_scripts=[]
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets,external_scripts=external_scripts)
+app.title = Title
+app._favicon = ("assets/favicon.ico")
+
+
+################################################################################################################
+# Functions
+################################################################################################################
             
 def GetExcel(path=DefaultPath):
 	ExcelPath = path + os.sep + ExcelName
@@ -139,59 +169,43 @@ def GetExcel(path=DefaultPath):
 			
 	Excel = json.dumps(Excel.to_json())
 	return Excel
-           
-           
+
 def ConvertStoredJSON(JSON):
 	Excel = pd.read_json(
 		json.loads(JSON),
 		orient='columns',
 		dtype=converters,
 	)
-
 	Excel.replace({"NaT": ""}, inplace=True)
 	return Excel
 	
 def GetFilename(options, index):
+
 	if index is None:
 		return None
 	else:
 		return options[index]["label"]["props"]["children"][0]
 		
 
-
 ################################################################################################################
-# Bootstrap Style sheet and run.
-################################################################################################################
-
-external_stylesheets = [
-    {
-        "href": "https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css",
-        "rel": "stylesheet",
-    },
-]
-external_scripts=[]
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets,external_scripts=external_scripts)
-app.title = "Title"
-
-################################################################################################################
-# Banner & Defualts
+# Banner
 ################################################################################################################
 
 def Banner():
 	return html.Div(
-            children=[
-                html.P(children="👪🌳", className="header-emoji"),
-                html.H1(
-                    children="Photo Organiser", className="header-title"
-                ),
-                html.P(
-                    children="Family tree photo catalogue tool",
-                    className="header-description",
-                ),
-            ],
-            className="header",
-        )
-        
+		children=[
+			html.P(children="👪🌳", className="header-emoji"),
+				html.H1(
+				children=Title, className="header-title"
+			),
+			html.P(
+				children=Description,
+				className="header-description",
+			)
+		],
+		className="header",
+	)
+
 def AlbumVarContainers(path=DefaultPath, Excel=GetExcel()):
 	return html.Div( 
 		style={'display': 'none'},
@@ -210,7 +224,7 @@ def AlbumVarContainers(path=DefaultPath, Excel=GetExcel()):
 			),
 		]
 	)
-     
+
 def VariableContainers(
 		Dat = DefaultVar
 	):		
@@ -274,49 +288,52 @@ def VariableContainers(
 			
 def PathSelect():
 	return html.Div(
-		        children=[
-		        	dbc.Col([
-		        	dbc.Row([
-		        		dbc.Col([
-		            	html.Div(children="Pick photo path", className="menu-title"),
-		            	], width=6),
-		            	
-		            	dbc.Col([
-		            	html.Div(children="Photo", className="menu-title"),
-		            	], width=6)
-		            ]),
-		            dbc.Row([
-		            	dbc.Col([
-		            		dbc.Input(
+			children=[
+				dbc.Col([
+					dbc.Row([
+						dbc.Col([
+							html.Div(children="Pick photo path", className="menu-title"),
+						], width=6),
+
+						dbc.Col([
+							html.Div(children="Photo", className="menu-title"),
+						], width=6)
+					]),
+					dbc.Row([
+						dbc.Col([
+							dbc.Input(
 								id="path_textInput",
 								type='text',
 								value=DefaultPath,
 								debounce=True,		
 							),	
-		            	], width=6-2),
+						], width=6-2),
 						dbc.Col([
 							dbc.Button(children="Select", id="path_buttonInput", n_clicks=0)
-		            	], width=2),
-		            	
-		            	dbc.Col([
-		            	dcc.Dropdown(
-				            id="PhotoSelectDropdown",
-				            options=[],
-				            value=None,
-				            clearable=False,
-				            searchable=False,
-				            placeholder="Select a photo...",
-				            style={"display":"fill", "width":"100%"}
-		            	),
-		            	], width=4),
-		            	dbc.Col([
-		            		dbc.Button(children="Prev", id="PhotoSelectPrev", n_clicks=0)
-		            	], width=1),
-		            	dbc.Col([
-		            		dbc.Button(children="Next", id="PhotoSelectNext", n_clicks=0)
-		            	], width=1),
-		        	])
-			])], className="menu",
+						], width=2),
+						dbc.Col([
+							dcc.Dropdown(
+								id="PhotoSelectDropdown",
+								options=[],
+								value=0,
+								clearable=False,
+								searchable=False,
+								placeholder="Select a photo...",
+								style={"display":"fill", "width":"100%"}
+							),
+						], width=4),
+						dbc.Col([
+							dbc.Button(children="Prev", id="PhotoSelectPrev", n_clicks=0)
+						], width=1),
+						dbc.Col([
+							dbc.Button(children="Next", id="PhotoSelectNext", n_clicks=0)
+						], width=1),
+						
+						
+					])
+				])
+			],
+			className="menu",
 	)
 	
 @app.callback(
@@ -394,20 +411,30 @@ def update_photoDropdowns(Dir, Excel):
 		Output('PhotoSelectNext','disabled')
 	],
 	[
+		Input('PhotoSelectDropdown','options'),
 		Input('PhotoSelectDropdown','value'),
 		Input('PhotoSelectPrev', "n_clicks"),
 		Input('PhotoSelectNext', "n_clicks"),
 	],
 	[
-		State('PhotoSelectDropdown','value'),
-		State('PhotoSelectDropdown','options'),	
+		State('PhotoSelectDropdown','value')
 	],
 	prevent_initial_call = False
 	)
-def update_photoDropdowns(photo, prev_click, next_click, index, options):
+def update_photoDropdowns(options, photo, prev_click, next_click, index):
 	NOptions = len(options)
+	if ctx.triggered_id == "PhotoSelectDropdown": 
+		if NOptions > 0:
+			PrevDisable = True
+			NextDisable = False
+			if NOptions == 1:
+				NextDisable = True
+			return [0, PrevDisable, NextDisable]
+		else:
+			return [None, True, True]
+
 	if index is None:
-		return [index, True, True]
+		return [None, True, True]
 		
 	PrevDisable = False
 	NextDisable = False
@@ -423,6 +450,8 @@ def update_photoDropdowns(photo, prev_click, next_click, index, options):
 	if index == 0:
 		PrevDisable = True
 		
+	
+		
 	return [index, PrevDisable, NextDisable]
 	
 	
@@ -437,13 +466,12 @@ def update_photoDropdowns(photo, prev_click, next_click, index, options):
 	
 def CreatePictureFig(Path):
 	if Path is None:
-		img = data.chelsea()
-		xshape = img.shape[1]
-		yshape = img.shape[0]
+		img = Image.open(DemoPhoto)
 	else:
 		img = Image.open(Path) 
-		xshape = img.size[0]
-		yshape = img.size[1]
+		
+	xshape = img.size[0]
+	yshape = img.size[1]
 		
 	layout = {
 		"autosize":True,
@@ -458,62 +486,65 @@ def CreatePictureFig(Path):
 		x=[-100], y=[-100],
 		opacity=.8,
 		mode="markers",
-        	marker=dict(size=20, symbol="x-thin", color=colourMarker, line=dict(width=5, color=colourMarker)),
-        	name="", 
-        	hoverinfo="x+y",
+		marker=dict(size=20, symbol="x-thin", color=colourMarker, line=dict(width=5, color=colourMarker)),
+		name="", 
+		hoverinfo="x+y",
 		hovertemplate= "x: %{x}<br>"+"y: %{y}",
-    	)
-    	
-	Fig.update_layout(layout)             
+	)
+	
+	Fig.update_layout(layout)
 	return Fig
 
-def Picture():
+def MainPicture():
 	config = {
 		"displayModeBar": False,
 		"doubleClick":"reset"
 	}
 	return html.Div(children=[
-           	dbc.Row([
-		       	dbc.Col([
-					dcc.Graph(
-						figure = CreatePictureFig(None),
-						id="picture", config=config,
-					),
-				]),
-			], className="metaform"),
-           	dbc.Row([
-		       	dbc.Col([
-					html.Div(
-						children=[
-						    html.Div(children="Name", className="menu-title"),
-						    dbc.Input(
-						    	placeholder='Enter a Name...',
-						    	type="text",
-						    	id="picture-nameperson",
-						    	debounce=True
-						    ),
-						]
-					), 
-				], width=12-3),
-		       	dbc.Col([
-					html.Div(
-						children=[
-						    html.Div(
-						    	children="Add", 
-						    	className="menu-title"
-						    ),
-						    dbc.Button(
-						    	children="Select", 
-						    	id="picture-addperson",
-						    	n_clicks=0,
-						    	className=""
-						    )
-						]
-					),
-				], width=3),
-		    ], className="metaform"),   
-		],
-	)
+		dbc.Row([
+			dbc.Col([
+				dcc.Graph(
+					figure = CreatePictureFig(None),
+					id="picture", config=config,
+				),
+			]),
+			], className="metaform"
+		),
+		dbc.Row([
+			dbc.Col([
+				html.Div(
+					children=[
+						html.Div(children="Name", className="menu-title"),
+						dbc.Input(
+							placeholder='Enter a Name...',
+							type="text",
+							id="picture-nameperson",
+							debounce=True
+						),
+					]
+				),
+				], width=12-3	
+			),
+			dbc.Col([
+				html.Div(
+					children=[
+						html.Div(
+							children="Add", 
+							className="menu-title"
+						),
+						dbc.Button(
+							children="Select", 
+							id="picture-addperson",
+							n_clicks=0,
+							className=""
+						)
+					]
+				),
+			], width=3
+			),
+			], className="metaform"
+		)
+	])
 	
 	
 @app.callback(
@@ -567,6 +598,7 @@ def update_figure(dropdownindex, clickData, dropdownoptions, directory, filename
 	[
 		Input('picture-addperson', "n_clicks"),
 		Input( {'type': 'dynamic-deleteperson', 'index': ALL} , 'n_clicks'),
+		Input('metadata_clearbutton', "n_clicks"),
 	],
 	[
 		State('picture-nameperson', "value"), 
@@ -579,19 +611,24 @@ def update_figure(dropdownindex, clickData, dropdownoptions, directory, filename
 def update_peopleList(
 		nclicks,
 		nclicks_del,
+		clearbutton,
 		
 		Name,
 		Coords,
 		ps,
 		xys,
 	):	
+	
+	if ctx.triggered_id == "metadata_clearbutton":
+		return [None,  DefaultVar["people"],  DefaultVar["people_xy"]]
+				
 	pslist= ps.split("|")
 	xyslist = xys.split("|")
 	if "" in pslist:
 		pslist.remove("")
 	if "" in xyslist:
 		xyslist.remove("")
-	
+		
 	if ctx.triggered_id == "picture-addperson":
 		if Name is None:
 			pass
@@ -621,6 +658,23 @@ def update_peopleList(
 			for i in range(len(pslist)):
 				ps += pslist[i] + "|"
 				xys += xyslist[i] + "|"
+	
+	#Sort in order			
+	pslist= ps.split("|")
+	xyslist = xys.split("|")
+	if "" in pslist:
+		pslist.remove("")
+	if "" in xyslist:
+		xyslist.remove("")
+	xslist = [int(xy.split(",")[0][1:]) for xy in xyslist]
+	xslist, pslist, xyslist = zip(*sorted(zip(xslist, pslist, xyslist)))
+	ps = ""
+	xys = ""
+	for i in range(len(pslist)):
+		ps += pslist[i] + "|"
+		xys += xyslist[i] + "|"	
+	
+		
 	return [None, ps, xys]
 	
 ################################################################################################################
@@ -683,128 +737,189 @@ def PeopleList(ps="", xys=""):
 			children = [row]
 		) 
 
-def Data():
+def MainForm():
 	return html.Div(
 		children=[
-		    html.Div(
-            children=[
-            	#Title
-            	dbc.Row([
-		            html.Div(
-		                children="Title",
-		                className="menu-title",
-                    ),
-                ]),
-                dbc.Row([
-					dbc.Input(
-						placeholder='Enter a title...',
-						id="metadata_title",
-						type='text',
-						value='',	
-						debounce=True					
-					),	    
-            	]),
-            	#Datepicker
-                dbc.Row([
-		            html.Div(
-		                children="Date",
-		                className="menu-title",
-                    ),
-                ]),
-                dbc.Row([
-		            dcc.DatePickerSingle(
-						id="metadata_date",
-						date=None,
-						placeholder="Pick a date...",
-						
-						month_format='MMMM Y',
-						display_format='Do MMM Y',
-						
-						clearable=True, 
-						initial_visible_month=date.today(),
-		                min_date_allowed=date(1800, 1, 1),
-		                max_date_allowed=date.today(),
-		                
-		            ),
-                ]),
-                #Title
-            	dbc.Row([
-		            html.Div(
-		                children="Location",
-		                className="menu-title",
-                    ),
-                ]),
-                dbc.Row([
-					dbc.Input(
-						placeholder='Enter a location...',
-						id="metadata_location",
-						type='text',
-						value='',		
-						debounce=True				
-					),	    
-            	]),
-                #Person select unselect
-                dbc.Row([
-		            html.Div(
-		                children="People",
-		                className="menu-title",
-		            ),
-                ]),
-                dbc.Row(
-               		children=[PeopleList()],
-               		id="metadata_people"
-                ),
-                #Caption
-            	dbc.Row([
-		            html.Div(
-		                children="Caption",
-		                className="menu-title",
-                    ),
-                ]),
-                dbc.Row([
-                	dbc.Textarea(
-						placeholder='Enter a caption...',
-						value='',	
-						id="metadata_caption",		
-						n_blur=0,		
-					),
-				]),
-		#Is Photo documentation complete?
-            	dbc.Row([
-		            html.Div(
-		                children="Complete",
-		                className="menu-title",
-                    ),
-                ]),
-		dbc.Row([
-                	dcc.RadioItems(
-						options=[
-							{"label":html.Span(["Yes"], style={'padding-left': 3, 'padding-right': 10}), "value":"Y"},
-							{"label":html.Span(["No"], style={'padding-left': 3, 'padding-right': 10}), "value":"N"},
-						],
-						value='N',	
-						id="metadata_complete",	
+			html.Div(
+				children=[
+					dbc.Row([
+						dbc.Col([
+							html.P(children="TODO"),
+						], width=6),
 
+						dbc.Col([
+							dbc.Button(
+								children="Help",
+								id="DashboardModal-Open",
+							),
+						], width=6) #TODO Formatting
+					]),
+					
+					#Title
+					dbc.Row([
+						dbc.Col([
+							html.Div(
+								children="Title",
+								className="menu-title",
+							),
+						]),
+					]),
+					dbc.Row([
+						dbc.Col([
+							dbc.Input(
+								placeholder='Enter a title...',
+								id="metadata_title",
+								type='text',
+								value='',	
+								debounce=True					
+							),
+						]),
+					]),
+					#Datepicker
+					dbc.Row([
+						dbc.Col([
+							html.Div(
+								children="Date",
+								className="menu-title",
+							),
+						]),
+					]),
+					dbc.Row([
+						dbc.Col([
+						dcc.DatePickerSingle(
+							id="metadata_date",
+							date=None,
+							placeholder="Pick a date...",
+									
+							month_format='MMMM Y',
+							display_format='Do MMM Y',
+									
+							clearable=True, 
+							initial_visible_month=date.today(),
+							min_date_allowed=date(MinYear, 1, 1),
+							max_date_allowed=date.today(),
+						),
+						], width=6, style={"text-align": "center"}),
+						dbc.Col([
+						dbc.Input(
+							placeholder='Enter a year...',
+							id="metadata_pickyear",
+							type='number',
+							value=None,		
+							debounce=True,		
+							
+							min=MinYear, max=MaxYear, step=1
+						),
+						], width=6, style={"text-align": "center"}),
+						dbc.Col([
+							html.Div(),
+						], width=0)
+					]),
+					#Title
+					dbc.Row([
+						dbc.Col([
+							html.Div(
+								children="Location",
+								className="menu-title",
+							),
+						]),
+					]),
+					dbc.Row([
+						dbc.Col([
+							dbc.Input(
+								placeholder='Enter a location...',
+								id="metadata_location",
+								type='text',
+								value='',		
+								debounce=True				
+							),
+						]),	
+					]),
+					#Person select unselect
+					dbc.Row([
+						dbc.Col([
+							html.Div(
+								children="People",
+								className="menu-title",
+							),
+						]),
+					]),
+					dbc.Row(
+						dbc.Col([
+							html.Div([PeopleList()], id="metadata_people"
+							)
+						]),
 					),
-				]),
+					#Caption
+					dbc.Row([
+						dbc.Col([
+							html.Div(
+								children="Caption",
+								className="menu-title",
+							),
+						]),
+					]),
+					dbc.Row([
+						dbc.Col([
+							dbc.Textarea(
+								placeholder='Enter a caption...',
+								value='',	
+								id="metadata_caption",		
+								n_blur=0,		
+							),
+						]),
+					]),
+					#Is Photo documentation complete?
+					dbc.Row([
+						dbc.Col([
+							html.Div(
+								children="Complete",
+								className="menu-title",
+							),
+						]),
+					]),
+					dbc.Row([
+						dbc.Col([
+							dcc.RadioItems(
+								options=[
+									{"label":html.Span(["Yes"], style={'padding-left': 3, 'padding-right': 10}), "value":"Y"},
+									{"label":html.Span(["No"], style={'padding-left': 3, 'padding-right': 10}), "value":"N"},
+								],
+								value='N',	
+								id="metadata_complete",
+							),
+						]),
+					]),
 				
-		#Submit
-            	dbc.Row([
-		            html.Div(
-		                children="\n",
-		                className="menu-title",
-		            ),    
-                ]),
-                dbc.Row([
-					dbc.Button(
-						children='Submit', 
-						id="metadata_submitbutton",
-						n_clicks=0
-					),
-				]),
-            ],
-        ),
-
+					#Submit
+					dbc.Row([
+						dbc.Col([
+							html.Div(
+								children="\n",
+								className="menu-title",
+							),
+						]),
+					]),
+					dbc.Row([
+						dbc.Col([
+							dbc.Button(
+								children='Clear', 
+								id="metadata_clearbutton",
+								n_clicks=0,
+								style={"background-color": colourAmber,"border-color": colourAmber,"color": "black"},
+							),
+						], width=6, style={"text-align": "center"}),
+						dbc.Col([
+							dbc.Button(
+								children='Submit', 
+								id="metadata_submitbutton",
+								n_clicks=0
+							),
+						], width=6, style={"text-align": "center"}),
+						
+					]),
+				]
+			),
 		],
 		className="metaform",
 	)
@@ -817,41 +932,78 @@ def Data():
 	[
 		Input('metadata_title', "value"),
 		Input('var_title','children'),
+		Input('metadata_clearbutton', "n_clicks")
 	],
 	[
 	
 	],
 	prevent_initial_call = True
 	)
-def update_metaTitle(text, Exceltext):
+def update_metaTitle(text, Exceltext, clearbutton):
 	if ctx.triggered_id == "metadata_title":
 		return [text, text]
 	elif ctx.triggered_id == "var_title":
 		return [Exceltext, Exceltext]
+	elif ctx.triggered_id == "metadata_clearbutton":
+		return [DefaultVar["title"],DefaultVar["title"]]
 	
 @app.callback(
 	[
 		Output('var_date','children'),
 		Output('metadata_date', "date"),
+		Output("metadata_date", "initial_visible_month"),
+		
+		Output("metadata_pickyear", "value"),
 	],
 	[
 		Input('metadata_date', "date"),
 		Input('var_date','children'),
+		Input("metadata_pickyear", "value"),
+		Input('metadata_clearbutton', "n_clicks")
 	],
 	[
-	
+		
 	],
 	prevent_initial_call = True
 	)
-def update_metaData(date, Exceldate):
-	if ctx.triggered_id == "metadata_date":
-		return [date, date]
+def update_metaData(metadate, Exceldate, year, clearbutton):
+	if year is None:
+		initialDate = None
+	else:
+		if isinstance(year, str):
+			if len(year) == 4:
+				year = int(year)
+			else:
+				year = int(datetime.strptime(year, '%Y-%m-%d').year)
+		else:
+			year = int(year)
+		
+		initialDate = str(date(year, 1, 1))
+		
+	
+	if ctx.triggered_id == "metadata_pickyear":
+		return [None, None, initialDate, year]
+	
+	elif ctx.triggered_id == "metadata_date":
+		if metadate is None:
+			pass
+		else:	
+			initialDate = str(datetime.strptime(metadate, '%Y-%m-%d').year)
+		return [metadate, metadate, initialDate, initialDate]
 		
 	elif ctx.triggered_id == "var_date":
 		if Exceldate == "":
 			Exceldate = None 
-		return [Exceldate, Exceldate]
-	
+			
+		if Exceldate is None:
+			pass
+		else:	
+			initialDate = str(datetime.strptime(Exceldate, '%Y-%m-%d').year)
+		return [Exceldate, Exceldate, initialDate, initialDate]
+		
+	elif ctx.triggered_id == "metadata_clearbutton":
+		return [ DefaultVar["date"],None, None, None]
+			
 @app.callback(
 	[
 		Output('var_location','children'),
@@ -860,17 +1012,20 @@ def update_metaData(date, Exceldate):
 	[
 		Input('metadata_location', "value"),
 		Input('var_location','children'),
+		Input('metadata_clearbutton', "n_clicks")
 	],
 	[
 	
 	],
 	prevent_initial_call = True
 	)
-def update_metaLoc(loc, locExcel):
+def update_metaLoc(loc, locExcel, clearbutton):
 	if ctx.triggered_id == "metadata_location":
 		return [loc, loc]
 	elif ctx.triggered_id == "var_location":
 		return [locExcel, locExcel]
+	elif ctx.triggered_id == "metadata_clearbutton":
+		return [DefaultVar["location"],DefaultVar["location"]]
 	
 @app.callback(
 	[
@@ -887,7 +1042,7 @@ def update_metaLoc(loc, locExcel):
 def update_metaPeople(ps, xys):
 	return [PeopleList(ps=ps, xys=xys)]
 
-	
+		
 @app.callback(
 	[
 		Output('var_caption','children'),
@@ -896,17 +1051,20 @@ def update_metaPeople(ps, xys):
 	[
 		Input('metadata_caption', "value"),
 		Input('var_caption','children'),
+		Input('metadata_clearbutton', "n_clicks")
 	],
 	[
 	
 	],
 	prevent_initial_call = True
 	)
-def update_metaCaption(text, textExcel):
+def update_metaCaption(text, textExcel, clearbutton):
 	if ctx.triggered_id == "metadata_caption":
 		return [text, text]
 	elif ctx.triggered_id == "var_caption":
 		return [textExcel, textExcel]
+	elif ctx.triggered_id == "metadata_clearbutton":
+		return [DefaultVar["caption"],DefaultVar["caption"]]
 		
 @app.callback(
 	[
@@ -916,17 +1074,20 @@ def update_metaCaption(text, textExcel):
 	[
 		Input('metadata_complete', "value"),
 		Input('var_complete','children'),
+		Input('metadata_clearbutton', "n_clicks")
 	],
 	[
 	
 	],
 	prevent_initial_call = True
 	)
-def update_metaComplete(Radio, RadioExcel):
+def update_metaComplete(Radio, RadioExcel, clearbutton):
 	if ctx.triggered_id == "metadata_complete":
 		return [Radio, Radio]
 	elif ctx.triggered_id == "var_complete":
 		return [RadioExcel, RadioExcel]
+	elif ctx.triggered_id == "metadata_clearbutton":
+		return [DefaultVar["complete"],DefaultVar["complete"]]
 	
 @app.callback(
 	[
@@ -1017,6 +1178,7 @@ def submit_phototoexcel(
 	return ["", json.dumps(Excel.to_json())]
 	
 
+
 @app.callback(
 	[
 		Output('variables','children')
@@ -1054,44 +1216,104 @@ def update_metadata(dropdownindex, dropdownoptions, Excel):
 		return [VariableContainers()]
 
 
-################################################################################################################
-# Main page
-################################################################################################################
 	
-def Main():
-	return html.Div(
-		children=[
-			dbc.Row([
-			dbc.Col(
-				Data(),
+################################################################################################################
+# Callbacks
+################################################################################################################
+
+#######################
+# Infopage
+#######################
+
+#Dashboard info screen 
+@app.callback(
+	[
+		Output("DashboardModal", "is_open"),
+	],
+	[
+		Input("DashboardModal-Open", "n_clicks"), Input("DashboardModal-Close", "n_clicks")
+	],
+	[
+		State("DashboardModal", "is_open")
+	]
+)
+def toggle_modal(n1, n2, is_open):
+	'''
+	Toggle info modal displays
+
+		Parameters:
+			n1 (bool): Is open clicked
+			 n2 (bool): Is close clicked
+			is_open (bool): T/F is open or closed
+
+		Returns:
+			is_open (bool): T/F is open or closed
+	'''
+	if n1 or n2:
+		return [not is_open]
+	return [is_open]
+	
+def InfoPage():
+	#Initial info splash screen
+	text_markdown = "\n \t"
+	with open('assets'+os.sep+'LoadInfo.md') as this_file:
+		for a in this_file.read():
+			if "\n" in a:
+				text_markdown += "\n \t"
+			else:
+				text_markdown += a
+	return dbc.Modal(
+		children = [
+			dbc.ModalBody(dcc.Markdown(text_markdown)),
+			dbc.ModalFooter(
+				dbc.Button("Close", id="DashboardModal-Close", className="ModalButton")
 			),
-			dbc.Col(
-				Picture(),
-			),
-			]),
 		],
-		className="wrapper"
+		is_open = True,
+		scrollable=True,
+		id="DashboardModal",
+		size="xl",
+		className="Modal",
 	)
+
 
 ################################################################################################################
 # Layout
 ################################################################################################################
-	
-app.layout = html.Div(
-    children=[
-        Banner(),
-        AlbumVarContainers(),
-        html.Div(
-		    id = "variables",
-		    children=VariableContainers(),
-        ),
-        PathSelect(),
 
-        Main()
-        
-    ]
+
+app.layout = html.Div(
+	children=[
+		#Markdown info page
+		InfoPage(), 
+		#Header
+		Banner(), 
+		#Excel info storage
+		AlbumVarContainers(),
+		#Photo info storage
+		html.Div(
+			id = "variables",
+			children=VariableContainers(),
+		),
+		#Album path selector
+		PathSelect(),
+		#Form and photo
+		html.Div(
+			children=[
+				dbc.Row([
+				dbc.Col(
+					MainForm(),
+				),
+				dbc.Col(
+					MainPicture(),
+				),
+				]),
+			],
+			className="wrapper"
+		)
+	]
 )
-			
+
 if __name__ == "__main__":
 	print("Run app dashboard")
 	app.config.suppress_callback_exceptions = True	

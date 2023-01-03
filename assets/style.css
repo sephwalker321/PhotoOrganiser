@@ -40,6 +40,8 @@ body {
     max-width: 384px;
 }
 
+
+
 .wrapper {
     width: 90%;
     margin-top: 24px;
@@ -137,14 +139,32 @@ body {
 }
 
 
-.DateInput_input {
-	color: inherit !important;
-	text-align: center;
-	font-size: inherit ! important;
-	Height: inherit !important;
-	Width: inherit !important;
-	padding-left: 3px !important;
-	padding-right: 3px !important;
+.SingleDatePickerInput {
+  border: 0px;
+
+  padding-right: 0px;
+  padding-left: 0px;
+  padding-top: 0px;
+  padding-bottom: 0px;
+}
+
+/* Fix box width of datepicker to be 100% of parent container*/
+.DateInput, .DateInput_1 {
+  width: 100%; /* replace with whatever length you prefer */
+}
+
+.DateInput_input, .DateInput_input_1 {
+  line-height: calc(1.5em + 0.75rem);
+  /* default flatly stuff */
+  height: calc(1.5em + 0.75rem + 2px);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  color: #7b8a8b;
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid #ced4da;
+  border-radius: 0.25rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
 .Locs {
@@ -166,6 +186,7 @@ body {
 }
 
 .Cols {
+  justify : center;
   width: 100%;
   margin-left: 0px;
 }
