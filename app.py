@@ -2,6 +2,10 @@
 https://github.com/sephwalker321/PhotoOrganiser
 
 Author: Joseph Walker j.j.walker@durham.ac.uk
+
+Wishlist
+	#TODO Add people highlighting?
+	
 ============================================================================"""
 
 ################################################################################################################
@@ -57,7 +61,6 @@ DemoPath = "photos"
 
 DemoPhoto = "assets"+os.sep+"DefaultPhoto.jpg" 
 
-DefaultPath = "/home/joseph/Desktop/Photos"
 DefaultPath = DemoPath
 
 ExcelName = "AlbumInfo.xlsx"
@@ -1537,7 +1540,7 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-l", "--local", type=bool, help="Run server on local machine default=False", default=True)
 	parser.add_argument("-p", "--port", type=int, help="Port used to serve the application default=8050", default=8050)
-	parser.add_argument("-d", "--debug", type=bool, help="Set Flask debug mode and enable dev tools default=False", default=False)#TODO Change back
+	parser.add_argument("-d", "--debug", type=bool, help="Set Flask debug mode and enable dev tools default=False", default=False)
 	
 	args = parser.parse_args()
 	#Interpret the arguments
