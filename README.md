@@ -153,5 +153,6 @@ Project Link: [https://github.com/sephwalker321/PhotoOrganiser](https://github.c
 <!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
 
- Demo photo can be found at [http://clipart-library.com/clip-art/2-25443_silhouette-child-drawing-family-computer-icons-silhouette-people.htm](HERE)
- Placeholder photo can be found at [https://clipartix.com/family-tree-clipart-image-24755/](HERE)
+ Demo photo can be found at [HERE](http://clipart-library.com/clip-art/2-25443_silhouette-child-drawing-family-computer-icons-silhouette-people.htm)
+ 
+ Placeholder photo can be found at [HERE](https://clipartix.com/family-tree-clipart-image-24755/)
