@@ -1,8 +1,6 @@
 <br />
 <p align="center">
   <a href="https://github.com/sephwalker321/PhotoOrganiser">
-    <img src="assets/family.png" alt="Logo" width="auto" height="80">
-    <img src="assets/tree.png" alt="Logo" width=auto height="80">
     <img src="assets/logo-plotly.svg" alt="Logo" width=auto height="80">
   </a>
 
@@ -70,24 +68,24 @@ This is an example of how to list things you need to use the software and how to
    ```
 
 2. Running the install script,
-  Linux:
-  ```
-  ./install_Linux.sh
-  ```
-  Windows:
-  ```
-  install_Windows.bat
+   Linux:
+   ```
+   ./install_Linux.sh
+   ```
+   Windows:
+   ```
+   install_Windows.bat
   ```
 
 3. Source the virtual environment,
-  Linux:
-  ```
-  source venv/bin/activate
-  ```
-  Windows:
-  ```
-  venv\Scripts\activate
-  ```
+   Linux:
+   ```
+   source venv/bin/activate
+   ```
+   Windows:
+   ```
+   venv\Scripts\activate
+   ```
 Alternatively see *requirements.txt* and install manually. 
 <!-- RUN EXAMPLES -->
 ## Run
@@ -150,3 +148,10 @@ Distributed under the MIT License. See `LICENSE` for more information.
 For any issues or questions contact Joseph Walker at j.j.walker@durham.ac.uk.
 
 Project Link: [https://github.com/sephwalker321/PhotoOrganiser](https://github.com/sephwalker321/PhotoOrganiser)
+
+
+<!-- ACKNOWLEDGEMENTS -->
+## Acknowledgements
+
+ Demo photo can be found at [http://clipart-library.com/clip-art/2-25443_silhouette-child-drawing-family-computer-icons-silhouette-people.htm](HERE)
+ Placeholder photo can be found at [https://clipartix.com/family-tree-clipart-image-24755/](HERE)

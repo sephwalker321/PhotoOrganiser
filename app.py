@@ -1,11 +1,8 @@
 """============================================================================
-
-Contents: 
+https://github.com/sephwalker321/PhotoOrganiser
 
 Author: Joseph Walker j.j.walker@durham.ac.uk
 ============================================================================"""
-
-#TODO Markdown
 
 ################################################################################################################
 # Imports and Set Up
@@ -56,10 +53,8 @@ Title = "Family Photo Organiser"
 Description = "Family tree photo catalogue tool"
 HelpText = "Fill out the form below and submit"
 
-#http://clipart-library.com/clip-art/2-25443_silhouette-child-drawing-family-computer-icons-silhouette-people.htm
 DemoPath = "photos" 
 
-#https://clipartix.com/family-tree-clipart-image-24755/
 DemoPhoto = "assets"+os.sep+"DefaultPhoto.jpg" 
 
 DefaultPath = "/home/joseph/Desktop/Photos"
@@ -1540,9 +1535,9 @@ app.layout = html.Div(
 if __name__ == "__main__":
 	#Feed in command line arguments	
 	parser = argparse.ArgumentParser()
-	parser.add_argument("-l", "--local", type=bool, help="Run server on local machine default=False", default=False)#TODO Change back
+	parser.add_argument("-l", "--local", type=bool, help="Run server on local machine default=False", default=True)
 	parser.add_argument("-p", "--port", type=int, help="Port used to serve the application default=8050", default=8050)
-	parser.add_argument("-d", "--debug", type=bool, help="Set Flask debug mode and enable dev tools default=False", default=True)#TODO Change back
+	parser.add_argument("-d", "--debug", type=bool, help="Set Flask debug mode and enable dev tools default=False", default=False)#TODO Change back
 	
 	args = parser.parse_args()
 	#Interpret the arguments

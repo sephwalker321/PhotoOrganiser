@@ -7,3 +7,5 @@ dash
 dash-daq
 dash-bootstrap-components
 dash-extensions
+pillow
+easygui
