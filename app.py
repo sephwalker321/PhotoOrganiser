@@ -1285,15 +1285,15 @@ def CreatePictureFig(path=DemoPhoto):
 	# Add image
 	Fig = px.imshow(img)
 	Fig.add_scatter(
-		x=[-100], y=[-100],
-		opacity=.8,
+		x=[0], y=[0],
+		opacity=0,
 		mode="markers",
 		marker=dict(size=20, symbol="x-thin", color=colourMarker, line=dict(width=5, color=colourMarker)),
 		name="", 
 		hoverinfo="x+y",
 		hovertemplate= "x: %{x}<br>"+"y: %{y}",
 	)
-	
+
 	#TODO Add people highlighting?
 	
 	Fig.update_layout(layout)
@@ -1406,7 +1406,10 @@ def update_figure(value, clickData, options, var_path, var_filename, fig):
 			
 			fig["data"][1]["x"] = [x]
 			fig["data"][1]["y"] = [y]
+			fig["data"][1]["opacity"] = 0.8
 			fig["data"][1]["marker"]["size"] = 20
+			
+			
 			
 			return [fig, xy, False, False, dropdownfilename]
 		
