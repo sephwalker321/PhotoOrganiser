@@ -75,7 +75,7 @@ This is an example of how to list things you need to use the software and how to
    Windows:
    ```
    install_Windows.bat
-  ```
+   ```
 
 3. Source the virtual environment,
    Linux:
