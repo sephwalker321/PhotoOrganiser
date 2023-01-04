@@ -1,10 +1,9 @@
+argparse
 numpy
 pandas
 xlrd
 openpyxl
-matplotlib
 dash
 dash-daq
 dash-bootstrap-components
 dash-extensions
-scikit-image

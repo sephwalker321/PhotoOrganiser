@@ -1,8 +1,3 @@
-/* Table of contents
-––––––––––––––––––––––––––––––––––––––––––––––––––
-–––––––––––––––––––––––––––––––––––––––––––––––––– */
-
-
 /* ---–––––––––––––––––––––––––––––––––––––––––––––––
 - Headers
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
@@ -40,8 +35,14 @@ body {
     max-width: 384px;
 }
 
+.text {
+    vertical-align: center;
+    text-align: center;
+}
 
-
+/* ---–––––––––––––––––––––––––––––––––––––––––––––––
+- Format metaform and photo
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 .wrapper {
     width: 90%;
     margin-top: 24px;
@@ -50,15 +51,10 @@ body {
     margin-right: 5%;
 }
 
-.card {
-    margin-top: 10px;
-    margin-bottom: 10px;
-    margin-left: 10px;
-    margin-right: 10px;
-    background-color: #FFFFFF;
-    box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.18);
-}
 
+/* ---–––––––––––––––––––––––––––––––––––––––––––––––
+- Photo and Album selection banner
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 .menu {
     height: 112px;
     width: auto;
@@ -80,6 +76,15 @@ body {
     box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.18);
 }
 
+.menu-title {
+    margin-bottom: 6px;
+    font-weight: bold;
+    color: #079A82;
+}
+
+/* ---–––––––––––––––––––––––––––––––––––––––––––––––
+- Metadata form
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 .metaform {
     height: auto;
     width: auto;
@@ -100,94 +105,59 @@ body {
     box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.18);
 }
 
-.button {
+/* ---–––––––––––––––––––––––––––––––––––––––––––––––
+- Format buttons
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+.button-del {
     background-color: #222222;
+    border-color: #000000;
     vertical-align: middle;
     
-    padding-right: 2px;
-    padding-left: 2px;
+
     padding-top: 0px;
     padding-bottom: 0px;
     
 }
 
-.dropdownFill {
-    width: 100%;
-    display': flex;
-    background-color: #FFFFFF;
-    
+.button {
+    vertical-align: middle;
 }
 
-.Select-control {
-    width: 256px;
-    height: 48px;
-    
-}
-
-.Select--single > .Select-control .Select-value, .Select-placeholder {
-    line-height: 48px;
-}
-
-.Select--multi .Select-value-label {
-    line-height: 32px;
-}
-
-.menu-title {
-    margin-bottom: 6px;
-    font-weight: bold;
-    color: #079A82;
-}
-
-
+/* ---–––––––––––––––––––––––––––––––––––––––––––––––
+- Datetime picker
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
 .SingleDatePickerInput {
-  border: 0px;
+    border: 0px;
 
-  padding-right: 0px;
-  padding-left: 0px;
-  padding-top: 0px;
-  padding-bottom: 0px;
+    padding-right: 0px;
+    padding-left: 0px;
+    padding-top: 0px;
+    padding-bottom: 0px;
 }
 
-/* Fix box width of datepicker to be 100% of parent container*/
 .DateInput, .DateInput_1 {
-  width: 100%; /* replace with whatever length you prefer */
+    width: 100%; 
 }
 
 .DateInput_input, .DateInput_input_1 {
-  line-height: calc(1.5em + 0.75rem);
-  /* default flatly stuff */
-  height: calc(1.5em + 0.75rem + 2px);
-  font-size: 0.9375rem;
-  font-weight: 400;
-  color: #7b8a8b;
-  background-color: #fff;
-  background-clip: padding-box;
-  border: 1px solid #ced4da;
-  border-radius: 0.25rem;
-  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-}
-
-.Locs {
-	text-align: center;
-	vertical-align: middle;
+    line-height: calc(1.5em + 0.75rem);
+    
+    height: calc(1.5em + 0.75rem + 2px);
+    font-size: 0.9375rem;
+    font-weight: 400;
+    color: #7b8a8b;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
 
 /* ---–––––––––––––––––––––––––––––––––––––––––––––––
-- Rows Cols
+- Format peoples list
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
-
-/* ---–––––––––––––––––––––––––––––––––––––––––––––––
-- Rows Cols
-–––––––––––––––––––––––––––––––––––––––––––––––––– */
-.Rows {
-  width: 100%;
-  margin-left: 0px;
+.peopleList {
+    text-align: center;
+    vertical-align: middle;
 }
-
-.Cols {
-  justify : center;
-  width: 100%;
-  margin-left: 0px;
-}
-
