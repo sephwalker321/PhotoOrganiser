@@ -34,6 +34,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 #from skimage import data
 from PIL import Image
+from PIL.ExifTags import TAGS
 
 #For moving data around as child
 import json
@@ -75,6 +76,7 @@ DefaultVar = {
 	"caption": "",
 	"people": "",
 	"people_xy": "",
+	"people_rgb": "",
 	"complete": "N",
 	"lastedit": "",	
 }
@@ -89,6 +91,7 @@ converters={
 	"caption": str,
 	"people": str,
 	"people_xy": str,
+	"people_rgb": str,
 	"complete": str,
 	"lastedit": str,
 }
@@ -163,6 +166,7 @@ def LoadExcel(path=DefaultPath):
 				"caption": DefaultVar["caption"],
 				"people": DefaultVar["people"],
 				"people_xy": DefaultVar["people_xy"],
+				"people_rgb": DefaultVar["people_rgb"],
 				"complete": DefaultVar["complete"],
 				"lastedit": DefaultVar["lastedit"],	
 			}],
@@ -291,7 +295,7 @@ def VariableContainers(
 	Element: dtype=html.Div
 		Hidden div containing photo metadata variables
 	
-	"""		
+	"""	
 	return html.Div( 
 		style={"display": "none"},
 		children = [
@@ -328,6 +332,10 @@ def VariableContainers(
 				children=Dat["people_xy"],
 			),
 			html.H1(
+				id="var_people_rgb",
+				children=Dat["people_rgb"],
+			),
+			html.H1(
 				id="var_complete",
 				children=Dat["complete"],
 			),
@@ -341,6 +349,14 @@ def VariableContainers(
 			),
 			html.H1(
 				id="null_clickdata",
+				children="",
+			),
+			html.H1(
+				id="null_clickcolour",
+				children="",
+			),
+			html.H1(
+				id="null_hoverdata",
 				children="",
 			),
 		]
@@ -592,25 +608,14 @@ def update_photoDropdowns(var_path, ExcelSheet):
 		Input("PhotoSelectNext", "n_clicks"),
 	],
 	[
-		State("PhotoSelectDropdown","value")
 	],
 	prevent_initial_call = False
 	)
-def update_photoDropdowns(options, photo, prev_click, next_click, index):
+def update_photoDropdowns(options, index, prev_click, next_click):
 	"""
 	Callback to update photo selection by button or default
 	"""
-	NOptions = len(options)
-	if ctx.triggered_id == "PhotoSelectDropdown": 
-		if NOptions > 0:
-			PrevDisable = True
-			NextDisable = False
-			if NOptions == 1:
-				NextDisable = True
-			return [0, PrevDisable, NextDisable]
-		else:
-			return [None, True, True]
-
+	
 	if index is None:
 		return [None, True, True]
 		
@@ -622,11 +627,13 @@ def update_photoDropdowns(options, photo, prev_click, next_click, index):
 		index -=  1
 	if ctx.triggered_id == "PhotoSelectNext":
 		index += 1
-		
+	
+	NOptions = len(options)	
 	if index == NOptions-1:
 		NextDisable = True
 	if index == 0:
 		PrevDisable = True
+	
 	return [index, PrevDisable, NextDisable]
 	
 ################################################################################################################
@@ -666,11 +673,17 @@ def PeopleList(ps="", xys=""):
 				continue
 			row = dbc.Row([
 				dbc.Col([
-					html.Div(
+					dbc.Button(
 						children="%s %s" % (pi, xysi),
+						id={
+							"type": "dynamic-personcontainer",
+							"index": N
+						},
+						n_clicks=0,
 						className="peopleList",
+						
 					)
-				], width=12-3),
+				], style={"text-align": "center"}, width=12-3),
 				dbc.Col([
 					dbc.Button(
 						children="Delete",
@@ -695,7 +708,7 @@ def PeopleList(ps="", xys=""):
 				dbc.Col([
 					html.Div(
 						children="Start tagging people!",
-						className="peopleList",
+						className="peopleListBland",
 					)
 				], width=12),
 		])
@@ -1109,6 +1122,7 @@ def update_metaComplete(metadata_complete, var_complete, metadata_clearbutton):
 		State("var_caption", "children"),
 		State("var_people", "children"),
 		State("var_people_xy", "children"),
+		State("var_people_rgb", "children"),
 		State("var_complete", "children"),
 	],
 	prevent_initial_call = True
@@ -1126,6 +1140,7 @@ def submit_phototoexcel(
 		var_caption,
 		var_people,
 		var_people_xy,
+		var_people_rgb,
 		var_complete,	
 	):
 	"""
@@ -1150,6 +1165,8 @@ def submit_phototoexcel(
 			var_people = DefaultVar["people"]
 		if var_people_xy is None:
 			var_people_xy = DefaultVar["people_xy"]
+		if var_people_rgb is None:
+			var_people_rgb = DefaultVar["people_rgb"]
 		if var_complete is None:
 			var_complete = DefaultVar["complete"]
 					
@@ -1163,6 +1180,7 @@ def submit_phototoexcel(
 			"caption": var_caption,
 			"people": var_people,
 			"people_xy": var_people_xy,
+			"people_rgb": var_people_rgb,
 			"complete": var_complete,
 			"lastedit": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),	
 		}], index=[0])
@@ -1218,6 +1236,7 @@ def update_metadata(value, options, ExcelSheet):
 			"caption":  Excel["caption"].values[0],
 			"people":  Excel["people"].values[0],
 			"people_xy":  Excel["people_xy"].values[0],
+			"people_rgb":  Excel["people_rgb"].values[0],
 			"complete":  Excel["complete"].values[0],
 			
 			"lastedit":  Excel["lastedit"].values[0],	
@@ -1253,6 +1272,35 @@ def submitbutton_enabledisable(value, options):
 # Photo
 ################################################################################################################
 
+def GetMeta(image):
+	"""
+	Pull out the metadata from PIL image
+
+	Parameters
+	----------
+	image: dtype=PIL Image
+		Image
+	
+	Returns
+	-------
+	Meta: dtype=dict
+		Dictonary of metadata
+	"""
+	# extract EXIF data
+	exifdata = image.getexif()
+	# iterating over all EXIF data fields
+	metadata = {}
+	for tag_id in exifdata:
+		# get the tag name, instead of human unreadable tag id
+		tag = TAGS.get(tag_id, tag_id)
+		data = exifdata.get(tag_id)
+		# decode bytes 
+		if isinstance(data, bytes):
+			data = data.decode()
+		label = f"{tag:25}"
+		metadata[label] = data
+	return metadata
+
 def CreatePictureFig(path=DemoPhoto):
 	"""
 	Generate figure containing the photo
@@ -1271,7 +1319,8 @@ def CreatePictureFig(path=DemoPhoto):
 		path = DemoPhoto
 	
 	img = Image.open(path) 
-		
+	Meta = GetMeta(img)
+	
 	xshape = img.size[0]
 	yshape = img.size[1]
 		
@@ -1297,7 +1346,7 @@ def CreatePictureFig(path=DemoPhoto):
 	#TODO Add people highlighting?
 	
 	Fig.update_layout(layout)
-	return Fig
+	return Fig, Meta
 
 def MainPicture():
 	"""
@@ -1315,11 +1364,12 @@ def MainPicture():
 		"displayModeBar": False,
 		"doubleClick":"reset"
 	}
+	Fig, Meta = CreatePictureFig()
 	return html.Div(children=[
 		dbc.Row([
 			dbc.Col([
 				dcc.Graph(
-					figure = CreatePictureFig(),
+					figure = Fig,
 					id="picture", config=config,
 				),
 			]),
@@ -1364,42 +1414,56 @@ def MainPicture():
 #######################
 # Callbacks
 #######################
+
+from colorsys import rgb_to_hsv, hsv_to_rgb
+
+def GetContrast(r, g, b, a=1):
+   """returns RGB components of complementary color"""
+   if a == 0:
+   	return(255,255,255)
+   hsv = rgb_to_hsv(r, g, b)
+   return hsv_to_rgb((hsv[0] + 0.5) % 1, hsv[1], hsv[2])
 		
 @app.callback(
 	[
 		Output("picture","figure"),
 		Output("null_clickdata", "children"),
+		Output("null_clickcolour", "children"),
 		Output("picture-nameperson", "disabled"),
 		Output("picture-addperson", "disabled"),
 		Output("var_filename", "children"),
 	],
 	[
 		Input("PhotoSelectDropdown", "value"),
-		Input("picture", "clickData")
+		Input("picture", "clickData"),
+		Input( {"type": "dynamic-personcontainer", "index": ALL} , "n_clicks")
 	],
 	[
 		State("PhotoSelectDropdown", "options"),
 		State("var_path", "children"),
 		State("var_filename", "children"),
-		State("picture","figure")
+		State("picture","figure"),
+		State("var_people_xy", "children"),
+		State("var_people_rgb", "children")
 	],
 	prevent_initial_call = True
 	)
-def update_figure(value, clickData, options, var_path, var_filename, fig):
+def update_figure(value, clickData, PersonclickData, options, var_path, var_filename, fig, xys, rgbs):
 	"""
 	Callback to update figure
 	"""
 	dropdownfilename = DropdownGetFilename(options, value) 
-	if ctx.triggered_id == "PhotoSelectDropdown":
+	if ctx.triggered_id == "PhotoSelectDropdown" or (sum(PersonclickData) == 0 and ctx.triggered_id != "picture"):
 		if dropdownfilename is None or var_path is None:
-			
-			return [CreatePictureFig(None), "(0,0)", True, True, var_filename]
+			Fig, Meta = CreatePictureFig(None)
+			return [Fig, "(0,0)", "black", True, True, var_filename]
 		else:
+			
 			Path =  var_path + os.sep + dropdownfilename
-			return [CreatePictureFig(Path), "(0,0)", True, True, dropdownfilename]
+			Fig, Meta = CreatePictureFig(Path)
+			return [Fig, "(0,0)", "black", True, True, dropdownfilename]
 			
 	elif ctx.triggered_id == "picture":
-	
 			x = clickData["points"][0]["x"]
 			y = clickData["points"][0]["y"]
 			xy = "(%s,%s)" % (x,y)
@@ -1409,15 +1473,51 @@ def update_figure(value, clickData, options, var_path, var_filename, fig):
 			fig["data"][1]["opacity"] = 0.8
 			fig["data"][1]["marker"]["size"] = 20
 			
+			colourplot = clickData["points"][0]["color"]
+			rgb = "(%s, %s, %s, %s)" % (colourplot["0"], colourplot["1"], colourplot["2"],colourplot["3"])
+			colour = GetContrast(colourplot["0"], colourplot["1"], colourplot["2"],colourplot["3"])
+			fig["data"][1]["marker"]["color"] = colour
+			fig["data"][1]["marker"]["line"]["color"] = colour
+			
+			return [fig, xy, rgb, False, False, dropdownfilename]
+	elif ctx.triggered_id["type"] == "dynamic-personcontainer":
+		index = int(ctx.triggered_id["index"])
+		if PersonclickData[index] > 0:		
+			xyslist = xys.split("|")
+			rgbslist = rgbs.split("|")
+			if "" in xyslist:
+				xyslist.remove("")
+			if "" in rgbslist:
+				rgbslist.remove("")
+					
+			xy = xyslist[index] 
+			rgblist = rgbslist[index].split(",")
+			rgblist[0] = rgblist[0][1:]
+			rgblist[-1] = rgblist[-1][:-1]
+			
+			x = int(xy.split(",")[0][1:])
+			y = int(xy.split(",")[1][:-1])
+			
+			fig["data"][1]["x"] = [x]
+			fig["data"][1]["y"] = [y]
+			fig["data"][1]["opacity"] = 0.8
+			fig["data"][1]["marker"]["size"] = 20
 			
 			
-			return [fig, xy, False, False, dropdownfilename]
+			colour = GetContrast(int(rgblist[0]), int(rgblist[1]), int(rgblist[2]))
+			fig["data"][1]["marker"]["color"] = colour
+			fig["data"][1]["marker"]["line"]["color"] = colour
+			
+			return [fig, xy, rgbslist[index], True, True, dropdownfilename]
+
+		
 		
 @app.callback(
 	[
 		Output("picture-nameperson","value"),
 		Output("var_people", "children"), 
-		Output("var_people_xy", "children")
+		Output("var_people_xy", "children"),
+		Output("var_people_rgb", "children")
 	],
 	[
 		Input("picture-addperson", "n_clicks"),
@@ -1427,8 +1527,10 @@ def update_figure(value, clickData, options, var_path, var_filename, fig):
 	[
 		State("picture-nameperson", "value"), 
 		State("null_clickdata", "children"), 
+		State("null_clickcolour", "children"), 
 		State("var_people", "children"), 
-		State("var_people_xy", "children")		
+		State("var_people_xy", "children"),
+		State("var_people_rgb", "children")		
 	],
 	prevent_initial_call = True
 	)
@@ -1439,21 +1541,26 @@ def update_peopleList(
 		
 		Name,
 		Coords,
+		Colour,
 		ps,
 		xys,
+		rgbs,
 	):
 	"""
 	Callback to update people list
 	"""	
 	if ctx.triggered_id == "metadata_clearbutton":
-		return [None,  DefaultVar["people"],  DefaultVar["people_xy"]]
+		return [None,  DefaultVar["people"],  DefaultVar["people_xy"],  DefaultVar["people_rgb"]]
 				
 	pslist= ps.split("|")
 	xyslist = xys.split("|")
+	rgbslist = rgbs.split("|")
 	if "" in pslist:
 		pslist.remove("")
 	if "" in xyslist:
 		xyslist.remove("")
+	if "" in rgbslist:
+		rgbslist.remove("")
 		
 	if ctx.triggered_id == "picture-addperson":
 		if Name is None:
@@ -1463,45 +1570,58 @@ def update_peopleList(
 			xyslist[index] = Coords
 			ps = ""
 			xys = ""
+			rgbs = "" 
 			for i in range(len(pslist)):
 				ps += pslist[i] + "|"
 				xys += xyslist[i] + "|"
+				rgbs += rgbslist[i] + "|"
 		else:
 			ps += Name + "|"
 			xys += Coords + "|"
+			rgbs += Colour + "|"
 			
 	elif ctx.triggered_id  is None:
-		return  [None, ps, xys]
+		return  [None, ps, xys, rgbs]
 		
 	elif ctx.triggered_id["type"] == "dynamic-deleteperson":
 		index = int(ctx.triggered_id["index"])
 		if nclicks_del[index] > 0:	
 			pslist.pop(index)
 			xyslist.pop(index)
+			rgbslist.pop(index)
 			
 			ps = ""
 			xys = ""
+			rgbs = ""
 			for i in range(len(pslist)):
 				ps += pslist[i] + "|"
 				xys += xyslist[i] + "|"
+				rgbs += rgbslist[i] + "|"
 	
-	#Sort in order			
-	pslist= ps.split("|")
-	xyslist = xys.split("|")
-	if "" in pslist:
-		pslist.remove("")
-	if "" in xyslist:
-		xyslist.remove("")
-	xslist = [int(xy.split(",")[0][1:]) for xy in xyslist]
-	xslist, pslist, xyslist = zip(*sorted(zip(xslist, pslist, xyslist)))
-	ps = ""
-	xys = ""
-	for i in range(len(pslist)):
-		ps += pslist[i] + "|"
-		xys += xyslist[i] + "|"	
+	if ps != "": #Can't sort an empty list!
+		#Sort in order			
+		pslist= ps.split("|")
+		xyslist = xys.split("|")
+		rgbslist = rgbs.split("|")
+		if "" in pslist:
+			pslist.remove("")
+		if "" in xyslist:
+			xyslist.remove("")
+		if "" in rgbslist:
+			rgbslist.remove("")
+		xslist = [int(xy.split(",")[0][1:]) for xy in xyslist]
+
+		xslist, pslist, xyslist, rgbslist = zip(*sorted(zip(xslist, pslist, xyslist, rgbslist)))
+		ps = ""
+		xys = ""
+		rgbs = ""
+		for i in range(len(pslist)):
+			ps += pslist[i] + "|"
+			xys += xyslist[i] + "|"	
+			rgbs += rgbslist[i] + "|"
 	
-	return [None, ps, xys]
-	
+	return [None, ps, xys, rgbs]
+		
 ################################################################################################################
 # Layout
 ################################################################################################################

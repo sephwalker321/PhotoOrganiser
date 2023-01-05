@@ -119,6 +119,10 @@ body {
     
 }
 
+.button-del:hover {
+    background-color: red;    
+}
+
 .button {
     vertical-align: middle;
 }
@@ -160,4 +164,32 @@ body {
 .peopleList {
     text-align: center;
     vertical-align: middle;
+    
+    background-color: white;
+    border-color: white;
+    color: #079A82;
+
+    padding-top: 0px;
+    padding-bottom: 0px;
+    
+    border-radius: 0.25rem;
+}
+
+.peopleList:hover {
+    color: white;
+
+}
+
+.peopleListBland {
+    text-align: center;
+    vertical-align: middle;
+    
+    background-color: white;
+    border-color: white;
+    color: #079A82;
+
+    padding-top: 0px;
+    padding-bottom: 0px;
+    
+    border-radius: 0.25rem;
 }
