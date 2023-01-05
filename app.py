@@ -32,6 +32,7 @@ from datetime import date, datetime
 #Image plotting
 import plotly.graph_objects as go
 import plotly.express as px
+from colorsys import rgb_to_hsv, hsv_to_rgb
 #from skimage import data
 from PIL import Image
 from PIL.ExifTags import TAGS
@@ -236,6 +237,31 @@ def DropdownGetFilename(options, index):
 		return None
 	else:
 		return options[index]["label"]["props"]["children"][0]
+		
+def GetContrast(r, g, b, a=1):
+	"""
+	returns RGB components of complementary color
+
+	Parameters
+	----------
+	r: dtype=int
+		r pixel value
+	g: dtype=int
+		g pixel value
+	b: dtype=int
+		b pixel value
+	a: dtype=int
+		alpha pixel value
+	
+	Returns
+	-------
+	rgb: dtype=tuple
+		tuple of rgb values
+	"""
+	if a == 0:
+		return(255,255,255)
+	hsv = rgb_to_hsv(r, g, b)
+	return hsv_to_rgb((hsv[0] + 0.5) % 1, hsv[1], hsv[2])
 		
 	
 ################################################################################################################
@@ -1414,15 +1440,6 @@ def MainPicture():
 #######################
 # Callbacks
 #######################
-
-from colorsys import rgb_to_hsv, hsv_to_rgb
-
-def GetContrast(r, g, b, a=1):
-   """returns RGB components of complementary color"""
-   if a == 0:
-   	return(255,255,255)
-   hsv = rgb_to_hsv(r, g, b)
-   return hsv_to_rgb((hsv[0] + 0.5) % 1, hsv[1], hsv[2])
 		
 @app.callback(
 	[
